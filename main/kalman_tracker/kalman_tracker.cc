@@ -11,10 +11,8 @@ void KalmanVelocityTracker::update(const StateVector & observation) {
     hit_streak_ += 1;
 
     // measurement
-//    measurement.at<float>(0, 0) = stateMat.x + stateMat.width / 2;
-//    measurement.at<float>(1, 0) = stateMat.y + stateMat.height / 2;
-//    measurement.at<float>(2, 0) = stateMat.area();
-//    measurement.at<float>(3, 0) = stateMat.width / stateMat.height;
+    auto transformed_bbox = get_xysr_from_bbox(observation);
+    measurement_matrix_ = cv::Mat(DIM_MEASURE, 1, CV_32F, transformed_bbox.data());
 
     // update
     filter_.correct(measurement_matrix_);
@@ -29,7 +27,7 @@ StateVector KalmanVelocityTracker::predict() {
         hit_streak_ = 0;
     time_since_update_ += 1;
 
-    auto predict_box = get_rect_xysr(p.at<float>(0, 0), p.at<float>(1, 0), p.at<float>(2, 0), p.at<float>(3, 0));
+    auto predict_box = get_bbox_from_xysr(p.at<float>(0, 0), p.at<float>(1, 0), p.at<float>(2, 0), p.at<float>(3, 0));
 
     history_.push_back(predict_box);
     return history_.back();
@@ -45,12 +43,12 @@ StateVector KalmanVelocityTracker::predict() {
 //    const int num_left_nodes = num_nodes / 2;
         Graph graph(num_nodes, num_arcs);
 //    std::vector arc_costs(num_arcs);
-////    for (int arc = 0; arc < num_arcs; ++arc) {
-////        const int arc_tail = ...   // must be in [0, num_left_nodes)
-////        const int arc_head = ...   // must be in [num_left_nodes, num_nodes)
-////        graph.AddArc(arc_tail, arc_head);
-////        arc_costs[arc] = ...
-////    }
+//    for (int arc = 0; arc < num_arcs; ++arc) {
+//        const int arc_tail = ...   // must be in [0, num_left_nodes)
+//        const int arc_head = ...   // must be in [num_left_nodes, num_nodes)
+//        graph.AddArc(arc_tail, arc_head);
+//        arc_costs[arc] = ...
+//    }
 //    // Build the StaticGraph. You can skip this step by using a ListGraph<>
 //    // instead, but then the ComputeAssignment() below will be slower. It is
 //    // okay if your graph is small and performance is not critical though.
@@ -83,11 +81,11 @@ StateVector KalmanVelocityTracker::predict() {
 // Return the current state vector
 StateVector KalmanVelocityTracker::get_state() {
     cv::Mat s = filter_.statePost;
-    return get_rect_xysr(s.at<float>(0, 0), s.at<float>(1, 0), s.at<float>(2, 0), s.at<float>(3, 0));
+    return get_bbox_from_xysr(s.at<float>(0, 0), s.at<float>(1, 0), s.at<float>(2, 0), s.at<float>(3, 0));
 }
 
 // Convert bounding box from [cx,cy,s,r] to [x,y,w,h] style.
-StateVector KalmanVelocityTracker::get_rect_xysr(float cx, float cy, float s, float r) {
+StateVector KalmanVelocityTracker::get_bbox_from_xysr(float cx, float cy, float s, float r) {
     float w = std::sqrt(s * r);
     float h = s / w;
     float x = (cx - w / 2);
@@ -99,6 +97,18 @@ StateVector KalmanVelocityTracker::get_rect_xysr(float cx, float cy, float s, fl
         y = 0;
 
     StateVector result {x, y, w, h};
+
+    return result;
+}
+
+// Convert bounding box from [x,y,w,h] to [cx,cy,s,r] style.
+StateVector KalmanVelocityTracker::get_xysr_from_bbox(const StateVector & bbox) {
+    float cx = bbox.at(0) + bbox.at(2) / 2;
+    float cy = bbox.at(1) + bbox.at(3) / 2;
+    float s =  bbox.at(2) * bbox.at(3);
+    float r  = bbox.at(2) / bbox.at(3);
+
+    StateVector result {cx, cy, s, r};
 
     return result;
 }

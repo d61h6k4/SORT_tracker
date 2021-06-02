@@ -34,14 +34,18 @@ public:
         filter_ = cv::KalmanFilter(DIM_STATE, DIM_MEASURE);
         measurement_matrix_ = cv::Mat::zeros(DIM_STATE, 1, CV_32F);
 
-        //    filter_.transitionMatrix = *(cv::Mat_<float>(DIM_STATE, DIM_STATE) <<
-        //            1, 0, 0, 0, 1, 0, 0,
-        //            0, 1, 0, 0, 0, 1, 0,
-        //            0, 0, 1, 0, 0, 0, 1,
-        //            0, 0, 0, 1, 0, 0, 0,
-        //            0, 0, 0, 0, 1, 0, 0,
-        //            0, 0, 0, 0, 0, 1, 0,
-        //            0, 0, 0, 0, 0, 0, 1);
+        std::vector<float> mat_data {
+            1, 0, 0, 0, 1, 0, 0,
+            0, 1, 0, 0, 0, 1, 0,
+            0, 0, 1, 0, 0, 0, 1,
+            0, 0, 0, 1, 0, 0, 0,
+            0, 0, 0, 0, 1, 0, 0,
+            0, 0, 0, 0, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 1
+        };
+
+        cv::Mat transition_matrix_init(DIM_STATE, DIM_STATE, CV_32F, mat_data.data());
+        filter_.transitionMatrix = transition_matrix_init;
 
         cv::setIdentity(filter_.measurementMatrix);
         cv::setIdentity(filter_.processNoiseCov, cv::Scalar::all(1e-2));
@@ -62,7 +66,8 @@ public:
     static int tracker_count;
 
     StateVector get_state();
-    StateVector get_rect_xysr(float cx, float cy, float s, float r);
+    StateVector get_bbox_from_xysr(float cx, float cy, float s, float r);
+    StateVector get_xysr_from_bbox(const StateVector &);
     StateVector predict();
     void update(const StateVector & observation);
 
