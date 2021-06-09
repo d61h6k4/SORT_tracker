@@ -1,6 +1,6 @@
 #include "kalman_tracker.h"
 
-namespace SortTracker {
+namespace Tracker {
 
 int KalmanVelocityTracker::tracker_count = 0;
 
@@ -11,7 +11,7 @@ void KalmanVelocityTracker::update(const StateVector & observation) {
     hit_streak_ += 1;
 
     // measurement
-    auto transformed_bbox = get_xysr_from_bbox(observation);
+    auto transformed_bbox = get_state_from_bbox(observation);
     measurement_matrix_ = cv::Mat(DIM_MEASURE, 1, CV_32F, transformed_bbox.data());
 
     // update
@@ -27,7 +27,8 @@ StateVector KalmanVelocityTracker::predict() {
         hit_streak_ = 0;
     time_since_update_ += 1;
 
-    auto predict_box = get_bbox_from_xysr(p.at<float>(0, 0), p.at<float>(1, 0), p.at<float>(2, 0), p.at<float>(3, 0));
+    StateVector state = {p.at<float>(0, 0), p.at<float>(1, 0), p.at<float>(2, 0), p.at<float>(3, 0)};
+    auto predict_box = get_bbox_from_state(state);
 
     history_.push_back(predict_box);
     return history_.back();
@@ -81,19 +82,20 @@ StateVector KalmanVelocityTracker::predict() {
 // Return the current state vector
 StateVector KalmanVelocityTracker::get_state() {
     cv::Mat s = filter_.statePost;
-    return get_bbox_from_xysr(s.at<float>(0, 0), s.at<float>(1, 0), s.at<float>(2, 0), s.at<float>(3, 0));
+    StateVector state = {s.at<float>(0, 0), s.at<float>(1, 0), s.at<float>(2, 0), s.at<float>(3, 0)};
+    return get_bbox_from_state(state);
 }
 
-// Convert bounding box from [cx,cy,s,r] to [x,y,w,h] style.
-StateVector KalmanVelocityTracker::get_bbox_from_xysr(float cx, float cy, float s, float r) {
-    float w = std::sqrt(s * r);
-    float h = s / w;
-    float x = (cx - w / 2);
-    float y = (cy - h / 2);
+// Convert bounding box from [cx,cy,s,r] to [x,y,w,h] style vector.
+StateVector get_bbox_from_state(const StateVector & vec) {
+    float w = std::sqrt(vec.at(2) * vec.at(3));
+    float h = vec.at(2) / w;
+    float x = (vec.at(0) - w / 2);
+    float y = (vec.at(1) - h / 2);
 
-    if (x < 0 && cx > 0)
+    if (x < 0 && vec.at(0) > 0)
         x = 0;
-    if (y < 0 && cy > 0)
+    if (y < 0 && vec.at(1) > 0)
         y = 0;
 
     StateVector result {x, y, w, h};
@@ -102,13 +104,13 @@ StateVector KalmanVelocityTracker::get_bbox_from_xysr(float cx, float cy, float 
 }
 
 // Convert bounding box from [x,y,w,h] to [cx,cy,s,r] style.
-StateVector KalmanVelocityTracker::get_xysr_from_bbox(const StateVector & bbox) {
-    float cx = bbox.at(0) + bbox.at(2) / 2;
-    float cy = bbox.at(1) + bbox.at(3) / 2;
-    float s =  bbox.at(2) * bbox.at(3);
-    float r  = bbox.at(2) / bbox.at(3);
+StateVector get_state_from_bbox(const StateVector & bbox) {
+    float center_x = bbox.at(0) + bbox.at(2) / 2;
+    float center_y = bbox.at(1) + bbox.at(3) / 2;
+    float area =  bbox.at(2) * bbox.at(3);
+    float ratio  = bbox.at(2) / bbox.at(3);
 
-    StateVector result {cx, cy, s, r};
+    StateVector result {center_x, center_y, area, ratio};
 
     return result;
 }

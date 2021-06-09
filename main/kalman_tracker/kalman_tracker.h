@@ -8,7 +8,7 @@
 #include "ortools/graph/linear_assignment.h"
 #include "opencv2/video/tracking.hpp"
 
-namespace SortTracker {
+namespace Tracker {
 
 using StateVector = std::vector<float>;
 // Choose a graph implementation (recommended StaticGraph<>).
@@ -66,8 +66,6 @@ public:
     static int tracker_count;
 
     StateVector get_state();
-    StateVector get_bbox_from_xysr(float cx, float cy, float s, float r);
-    StateVector get_xysr_from_bbox(const StateVector &);
     StateVector predict();
     void update(const StateVector & observation);
 
@@ -87,6 +85,18 @@ private:
 
     void solve_assignment_(const cv::Mat & cost_matrix);
 };
+
+    // class for unification of trackers and linear assignment solver
+class SortTracker {
+public:
+    StateVector update(const StateVector & observation);
+
+private:
+    std::vector<KalmanVelocityTracker> trackers_;
+};
+
+StateVector get_bbox_from_state(const StateVector &);
+StateVector get_state_from_bbox(const StateVector &);
 
 } // namespace SortTracker
 
