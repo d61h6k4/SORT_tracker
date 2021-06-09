@@ -7,6 +7,7 @@
 #include "ortools/graph/graph.h"
 #include "ortools/graph/linear_assignment.h"
 #include "opencv2/video/tracking.hpp"
+#include "main/utils/tracker_helper.h"
 
 namespace Tracker {
 
@@ -24,7 +25,7 @@ public:
         age_ = 0;
         id_ = tracker_count;
     }
-    KalmanVelocityTracker(const StateVector & init_state) {
+    KalmanVelocityTracker(const StateVector & init_bbox) {
         time_since_update_ = 0;
         hits_ = 0;
         hit_streak_ = 0;
@@ -52,11 +53,12 @@ public:
         cv::setIdentity(filter_.measurementNoiseCov, cv::Scalar::all(1e-1));
         cv::setIdentity(filter_.errorCovPost, cv::Scalar::all(1));
 
-        // initialize state vector with bounding box in [cx,cy,s,r] style
-        //    filter_.statePost.at<float>(0, 0) = stateMat.x + stateMat.width / 2;
-        //    filter_.statePost.at<float>(1, 0) = stateMat.y + stateMat.height / 2;
-        //    filter_.statePost.at<float>(2, 0) = stateMat.area();
-        //    filter_.statePost.at<float>(3, 0) = stateMat.width / stateMat.height;
+        auto init_state = get_state_from_bbox(init_bbox);
+
+        // copy intial state to kalman filter initial state matrix
+        for (auto i = 0; i < DIM_MEASURE; ++i){
+          filter_.statePost.at<float>(i, 0) = init_state.at(i);
+        }
 
     }
     ~KalmanVelocityTracker() {
@@ -82,8 +84,6 @@ private:
     cv::KalmanFilter filter_;
     cv::Mat measurement_matrix_;
     std::vector <StateVector> history_;
-
-    void solve_assignment_(const cv::Mat & cost_matrix);
 };
 
     // class for unification of trackers and linear assignment solver
@@ -93,10 +93,9 @@ public:
 
 private:
     std::vector<KalmanVelocityTracker> trackers_;
-};
 
-StateVector get_bbox_from_state(const StateVector &);
-StateVector get_state_from_bbox(const StateVector &);
+    void solve_assignment_(const cv::Mat & cost_matrix);
+};
 
 } // namespace SortTracker
 

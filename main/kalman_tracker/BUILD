@@ -4,6 +4,7 @@ cc_library(
     hdrs = ["kalman_tracker.h"],
     srcs = ["kalman_tracker.cc"],
     deps = [
+        "//main/utils:tracker_helper",
         "@opencv//:opencv",
         "@com_google_ortools//ortools/base",
         "@com_google_ortools//ortools/graph",
