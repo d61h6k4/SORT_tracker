@@ -1,0 +1,39 @@
+name: C++ lint and test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-20.04 ]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install clang-format
+        run: |
+          sudo apt install clang-format
+      - name: Run linter
+        run: |
+          CLANG_FORMAT_ROOT=. TEST=1 bash tools/clang_format_all_the_things.sh
+
+      # Caches and restores the bazel build directory.
+      - name: Cache bazel build results
+        uses: actions/cache@v2.0.0
+        env:
+          cache-name: bazel-cache
+        with:
+          path: ~/.cache/bazel
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ github.ref }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-main
+
+      - name: Run Tests
+        run: bazel test //...
