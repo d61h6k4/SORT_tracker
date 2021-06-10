@@ -22,10 +22,10 @@ jobs:
           sudo apt install clang-format
 
       - name: Install opencv
-        run: |
+        run:
           sudo apt install libopencv-core-dev libopencv-highgui-dev
-          libopencv-calib3d-dev libopencv-features2d-dev
-          libopencv-imgproc-dev libopencv-video-dev
+            libopencv-calib3d-dev libopencv-features2d-dev
+            libopencv-imgproc-dev libopencv-video-dev
 
       - name: Run linter
         run: |
