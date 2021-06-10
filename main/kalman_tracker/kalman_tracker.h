@@ -36,26 +36,64 @@ class KalmanVelocityTracker {
     filter_ = cv::KalmanFilter(DIM_STATE, DIM_MEASURE);
     measurement_matrix_ = cv::Mat::zeros(DIM_STATE, 1, CV_32F);
 
-    std::vector<float> mat_data{1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1,
-                                0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1};
+    // clang-format off
+    std::vector<float> transition_data{
+      1, 0, 0, 0, 1, 0, 0,
+      0, 1, 0, 0, 0, 1, 0,
+      0, 0, 1, 0, 0, 0, 1,
+      0, 0, 0, 1, 0, 0, 0,
+      0, 0, 0, 0, 1, 0, 0,
+      0, 0, 0, 0, 0, 1, 0,
+      0, 0, 0, 0, 0, 0, 1
+    };
 
-    cv::Mat transition_matrix_init(DIM_STATE, DIM_STATE, CV_32F, mat_data.data());
+    std::vector<float> measurement_uncertainty_data{
+      1e1, 0, 0, 0, 0, 0, 0,
+      0, 1e1, 0, 0, 0, 0, 0,
+      0, 0, 1e1, 0, 0, 0, 0,
+      0, 0, 0, 1e1, 0, 0, 0,
+      0, 0, 0, 0, 1e4, 0, 0,
+      0, 0, 0, 0, 0, 1e4, 0,
+      0, 0, 0, 0, 0, 0, 1e4
+    };
+
+    std::vector<float> process_noise_data{
+      1e0, 0, 0, 0, 0, 0, 0,
+      0, 1e0, 0, 0, 0, 0, 0,
+      0, 0, 1e0, 0, 0, 0, 0,
+      0, 0, 0, 1e1, 0, 0, 0,
+      0, 0, 0, 0, 1e-2, 0, 0,
+      0, 0, 0, 0, 0, 1e-2, 0,
+      0, 0, 0, 0, 0, 0, 1e-4
+    };
+
+    std::vector<float> state_uncertainty_data{
+      1e0, 0, 0, 0,
+      0, 1e0, 0, 0,
+      0, 0, 1e1, 0,
+      0, 0, 0, 1e1
+    };
+
+    // clang-format on
+    cv::Mat transition_matrix_init(DIM_STATE, DIM_STATE, CV_32F, transition_data.data());
     filter_.transitionMatrix = transition_matrix_init;
 
-    cv::setIdentity(filter_.measurementMatrix);
+    filter_.measurementMatrix = measurement_matrix_;
 
     // process uncertainty matrix Q
-    cv::setIdentity(filter_.processNoiseCov, cv::Scalar::all(1e-2));
+    cv::Mat process_noise_init(DIM_STATE, DIM_STATE, CV_32F, process_noise_data.data());
+    filter_.processNoiseCov = process_noise_init;
 
     // state uncertainty matrix R
-    cv::setIdentity(filter_.measurementNoiseCov, cv::Scalar::all(1e-1));
+    cv::Mat state_uncertainty_init(DIM_MEASURE, DIM_MEASURE, CV_32F, state_uncertainty_data.data());
+    filter_.measurementNoiseCov = state_uncertainty_init;
 
-    // state uncertainty matrix P
-    cv::setIdentity(filter_.errorCovPost, cv::Scalar::all(1));
-
-    auto init_state = get_state_from_bbox(init_bbox);
+    // uncertainty covariance matrix P
+    cv::Mat measurement_noise_init(DIM_STATE, DIM_STATE, CV_32F, measurement_uncertainty_data.data());
+    filter_.errorCovPost = measurement_noise_init;
 
     // copy initial state to kalman filter initial state matrix
+    auto init_state = get_state_from_bbox(init_bbox);
     for (auto i = 0; i < DIM_MEASURE; ++i) {
       filter_.statePost.at<float>(i, 0) = init_state.at(i);
     }

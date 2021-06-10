@@ -4,33 +4,48 @@ namespace Tracker {
 
 int KalmanVelocityTracker::tracker_count = 0;
 
-void KalmanVelocityTracker::update(const StateVector& observation) {
+// Correct step
+void KalmanVelocityTracker::update(const StateVector& observed_bbox) {
   time_since_update_ = 0;
   history_.clear();
   hits_ += 1;
   hit_streak_ += 1;
 
-  // measurement
-  auto transformed_bbox = get_state_from_bbox(observation);
-  measurement_matrix_ = cv::Mat(DIM_MEASURE, 1, CV_32F, transformed_bbox.data());
+  // create new measurement matrix
+  auto observed_state = get_state_from_bbox(observed_bbox);
+  measurement_matrix_ = cv::Mat(DIM_MEASURE, 1, CV_32F, observed_state.data());
 
   // update
   filter_.correct(measurement_matrix_);
 }
 
-// Predict the estimated bounding box.
+// Predict step
 StateVector KalmanVelocityTracker::predict() {
-  cv::Mat p = filter_.predict();
+  cv::Mat prediction = filter_.predict();
   age_ += 1;
 
-  if (time_since_update_ > 0) hit_streak_ = 0;
+  if (time_since_update_ > 0) {
+    hit_streak_ = 0;
+  }
+
   time_since_update_ += 1;
 
-  StateVector state = {p.at<float>(0, 0), p.at<float>(1, 0), p.at<float>(2, 0), p.at<float>(3, 0)};
+  StateVector state(DIM_MEASURE, 0);
+  for (auto i = 0; i < DIM_MEASURE; ++i) {
+    state.at(i) = prediction.at<float>(i, 0);
+  }
+
   auto predict_box = get_bbox_from_state(state);
 
   history_.push_back(predict_box);
   return history_.back();
+}
+
+// Return the current state vector
+StateVector KalmanVelocityTracker::get_state() {
+  cv::Mat s = filter_.statePost;
+  StateVector state = {s.at<float>(0, 0), s.at<float>(1, 0), s.at<float>(2, 0), s.at<float>(3, 0)};
+  return get_bbox_from_state(state);
 }
 
 // Solve linear assignment
@@ -75,13 +90,6 @@ void SortTracker::solve_assignment_(const cv::Mat& cost_matrix) {
   //        operations_research::CostValue node_pair_cost =
   //                a.GetAssignmentCost(left_node);
   //    }
-}
-
-// Return the current state vector
-StateVector KalmanVelocityTracker::get_state() {
-  cv::Mat s = filter_.statePost;
-  StateVector state = {s.at<float>(0, 0), s.at<float>(1, 0), s.at<float>(2, 0), s.at<float>(3, 0)};
-  return get_bbox_from_state(state);
 }
 
 }  // namespace Tracker
