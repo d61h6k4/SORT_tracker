@@ -12,3 +12,6 @@ PointerAlignment: Left
 # test failures.
 CommentPragmas: ^-
 ColumnLimit: 120
+
+# Regroup include blocks, helps when the includes are falsely structured
+IncludeBlocks: Regroup

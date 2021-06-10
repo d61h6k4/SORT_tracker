@@ -1,4 +1,5 @@
 #include "main/utils/tracker_helper.h"
+
 #include "gtest/gtest.h"
 
 class SortTrackerTest : public ::testing::Test {};
