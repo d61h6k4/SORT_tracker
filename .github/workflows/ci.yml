@@ -20,6 +20,13 @@ jobs:
       - name: Install clang-format
         run: |
           sudo apt install clang-format
+
+      - name: Install opencv
+        run: |
+          sudo apt install libopencv-core-dev libopencv-highgui-dev
+          libopencv-calib3d-dev libopencv-features2d-dev
+          libopencv-imgproc-dev libopencv-video-dev
+
       - name: Run linter
         run: |
           CLANG_FORMAT_ROOT=. TEST=1 bash tools/clang_format_all_the_things.sh
