@@ -9,21 +9,17 @@ class LinearAssignmentTest : public ::testing::Test {};
 
 TEST_F(KalmanVelocityTrackerTest, VelocityEmptyInitializationSuccess) { Tracker::KalmanVelocityTracker tracker(); }
 
-// TEST_F(KalmanAccelerationTrackerTest, AccelerationEmptyInitializationSuccess)
-// {
-//  Tracker::KalmanAccelerationTracker<10, 4> tracker();
-//}
-
 TEST_F(KalmanVelocityTrackerTest, VelocityStateInitializationSuccess) {
-  Tracker::StateVector init_state(4, 1.0);
-  Tracker::KalmanVelocityTracker tracker(init_state);
-}
+  Tracker::StateVector init_bbox(4, 1.0);
+  Tracker::KalmanVelocityTracker tracker(init_bbox);
 
-// TEST_F(KalmanAccelerationTrackerTest, AccelerationStateInitializationSuccess)
-// {
-//  Tracker::StateVector init_state(4, 1.0);
-//  Tracker::KalmanAccelerationTracker<10, 4> tracker(init_state);
-//}
+  auto state_bbox = tracker.get_state_bbox();
+
+  EXPECT_FLOAT_EQ(state_bbox.at(0), 1);
+  EXPECT_FLOAT_EQ(state_bbox.at(1), 1);
+  EXPECT_FLOAT_EQ(state_bbox.at(2), 1);
+  EXPECT_FLOAT_EQ(state_bbox.at(3), 1);
+}
 
 TEST_F(LinearAssignmentTest, LinearAssignmentGraphInitializationSuccess) {
   const int num_nodes = 2;

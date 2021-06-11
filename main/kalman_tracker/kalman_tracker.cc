@@ -2,10 +2,10 @@
 
 namespace Tracker {
 
-int KalmanVelocityTracker::tracker_count = 0;
+int g_tracker_count = 0;
 
 // Correct step
-void KalmanVelocityTracker::update(const StateVector& observed_bbox) {
+StateVector KalmanVelocityTracker::update(const StateVector& observed_bbox) {
   time_since_update_ = 0;
   history_.clear();
   hits_ += 1;
@@ -13,15 +13,18 @@ void KalmanVelocityTracker::update(const StateVector& observed_bbox) {
 
   // create new measurement matrix
   auto observed_state = get_state_from_bbox(observed_bbox);
-  measurement_matrix_ = cv::Mat(DIM_MEASURE, 1, CV_32F, observed_state.data());
+  measurement_ = cv::Mat(dim_measure_, 1, CV_32F, observed_state.data());
 
   // update
-  filter_.correct(measurement_matrix_);
+  auto data = filter_.correct(measurement_);
+  auto corrected_bbox = get_bbox_from_state(data);
+
+  return corrected_bbox;
 }
 
 // Predict step
 StateVector KalmanVelocityTracker::predict() {
-  cv::Mat prediction = filter_.predict();
+  auto prediction = filter_.predict();
   age_ += 1;
 
   if (time_since_update_ > 0) {
@@ -30,8 +33,8 @@ StateVector KalmanVelocityTracker::predict() {
 
   time_since_update_ += 1;
 
-  StateVector state(DIM_MEASURE, 0);
-  for (auto i = 0; i < DIM_MEASURE; ++i) {
+  StateVector state(dim_measure_);
+  for (int i = 0; i < dim_measure_; ++i) {
     state.at(i) = prediction.at<float>(i, 0);
   }
 
@@ -42,7 +45,7 @@ StateVector KalmanVelocityTracker::predict() {
 }
 
 // Return the current state vector
-StateVector KalmanVelocityTracker::get_state() {
+StateVector KalmanVelocityTracker::get_state_bbox() {
   cv::Mat s = filter_.statePost;
   StateVector state = {s.at<float>(0, 0), s.at<float>(1, 0), s.at<float>(2, 0), s.at<float>(3, 0)};
   return get_bbox_from_state(state);
