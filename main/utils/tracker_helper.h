@@ -3,8 +3,8 @@
 #ifndef SORT_TRACKER_TRACKER_HELPER_H
 #define SORT_TRACKER_TRACKER_HELPER_H
 
-#include <cmath>
 #include <array>
+#include <cmath>
 
 namespace Tracker {
 using StateVector = std::array<float, 4>;
