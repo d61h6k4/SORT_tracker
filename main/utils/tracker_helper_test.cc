@@ -5,12 +5,7 @@
 class SortTrackerTest : public ::testing::Test {};
 
 TEST_F(SortTrackerTest, StateToBboxConversionSuccess) {
-  Tracker::StateVector state(4);
-
-  state.at(0) = 10;
-  state.at(1) = 10;
-  state.at(2) = 50;
-  state.at(3) = 2;
+  Tracker::StateVector state = {10, 10, 50, 2};
 
   Tracker::StateVector bbox = Tracker::get_bbox_from_state(state);
 
@@ -21,12 +16,7 @@ TEST_F(SortTrackerTest, StateToBboxConversionSuccess) {
 }
 
 TEST_F(SortTrackerTest, BboxToStateConversionSuccess) {
-  Tracker::StateVector bbox(4);
-
-  bbox.at(0) = 0;
-  bbox.at(1) = 0;
-  bbox.at(2) = 40;
-  bbox.at(3) = 20;
+  Tracker::StateVector bbox = {0, 0, 40, 20};
 
   Tracker::StateVector state = Tracker::get_state_from_bbox(bbox);
 
