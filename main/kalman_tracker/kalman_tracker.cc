@@ -2,8 +2,6 @@
 
 namespace Tracker {
 
-int g_tracker_count = 0;
-
 // Correct step
 StateVector KalmanVelocityTracker::update(const StateVector& observed_bbox) {
   time_since_update_ = 0;
@@ -17,7 +15,13 @@ StateVector KalmanVelocityTracker::update(const StateVector& observed_bbox) {
 
   // update
   auto data = filter_.correct(measurement_);
-  auto corrected_bbox = get_bbox_from_state(data);
+
+  StateVector corrected_state;
+  for (int i = 0; i < dim_measure_; ++i){
+    corrected_state.at(i) = data.at<float>(i, 0);
+  }
+
+  auto corrected_bbox = get_bbox_from_state(corrected_state);
 
   return corrected_bbox;
 }
@@ -33,7 +37,7 @@ StateVector KalmanVelocityTracker::predict() {
 
   time_since_update_ += 1;
 
-  StateVector state(dim_measure_);
+  StateVector state;
   for (int i = 0; i < dim_measure_; ++i) {
     state.at(i) = prediction.at<float>(i, 0);
   }

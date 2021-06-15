@@ -12,21 +12,18 @@
 
 namespace Tracker {
 
-using StateVector = std::vector<float>;
 // Choose a graph implementation (recommended StaticGraph<>).
 using Graph = util::StaticGraph<>;
-
-extern int g_tracker_count;
 
 // Class for constant velocity motion model
 class KalmanVelocityTracker {
  public:
-  KalmanVelocityTracker() {
+  KalmanVelocityTracker(int id) {
     time_since_update_ = 0;
     hits_ = 0;
     hit_streak_ = 0;
     age_ = 0;
-    id_ = g_tracker_count++;
+    id_ = id;
 
     filter_.init(dim_state_, dim_measure_);
 
@@ -97,7 +94,7 @@ class KalmanVelocityTracker {
   }
 
   // create kalman filter with initial bbox state
-  KalmanVelocityTracker(const StateVector& init_bbox) : KalmanVelocityTracker() {
+  KalmanVelocityTracker(const StateVector& init_bbox, int id) : KalmanVelocityTracker(id) {
     auto init_state = get_state_from_bbox(init_bbox);
     for (int i = 0; i < dim_measure_; ++i) {
       filter_.statePost.at<float>(i) = init_state.at(i);
@@ -126,13 +123,15 @@ class KalmanVelocityTracker {
 // class for unification of trackers and linear assignment solver
 class SortTracker {
  public:
-  StateVector update(const StateVector& observation);
+  StateVector update(const StateVector& detections);
 
  private:
   void solve_assignment_(const cv::Mat& cost_matrix);
 
  private:
   std::vector<KalmanVelocityTracker> trackers_;
+
+  int tracker_count_ = 0;
 };
 
 }  // namespace Tracker

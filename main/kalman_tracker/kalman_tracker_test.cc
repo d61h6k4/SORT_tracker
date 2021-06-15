@@ -7,11 +7,11 @@ namespace Tracker {
 class KalmanVelocityTrackerTest : public ::testing::Test {};
 class LinearAssignmentTest : public ::testing::Test {};
 
-TEST_F(KalmanVelocityTrackerTest, VelocityEmptyInitializationSuccess) { Tracker::KalmanVelocityTracker tracker(); }
+TEST_F(KalmanVelocityTrackerTest, VelocityEmptyInitializationSuccess) { Tracker::KalmanVelocityTracker tracker(0); }
 
 TEST_F(KalmanVelocityTrackerTest, VelocityStateInitializationSuccess) {
-  Tracker::StateVector init_bbox(4, 1.0);
-  Tracker::KalmanVelocityTracker tracker(init_bbox);
+  Tracker::StateVector init_bbox = {1, 1, 1, 1};
+  Tracker::KalmanVelocityTracker tracker(init_bbox, 0);
 
   auto state_bbox = tracker.get_state_bbox();
 

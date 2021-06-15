@@ -4,10 +4,10 @@
 #define SORT_TRACKER_TRACKER_HELPER_H
 
 #include <cmath>
-#include <vector>
+#include <array>
 
 namespace Tracker {
-using StateVector = std::vector<float>;
+using StateVector = std::array<float, 4>;
 
 StateVector get_bbox_from_state(const StateVector&);
 StateVector get_state_from_bbox(const StateVector&);
