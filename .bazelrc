@@ -22,11 +22,11 @@ build:tsan --linkopt -fsanitize=thread
 # Memory sanitizer
 # bazel build --config msan
 build:msan --strip=never
-build:msan --copt -fsanitize=leak
+build:msan --copt -fsanitize=memory
 build:msan --copt -DADDRESS_SANITIZER
 build:msan --copt -O1
 build:msan --copt -fno-omit-frame-pointer
-build:msan --linkopt -fsanitize=leak
+build:msan --linkopt -fsanitize=memory
 
 # Undefined Behavior Sanitizer
 # bazel build --config ubsan
