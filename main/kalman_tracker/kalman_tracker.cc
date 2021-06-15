@@ -17,7 +17,7 @@ StateVector KalmanVelocityTracker::update(const StateVector& observed_bbox) {
   auto data = filter_.correct(measurement_);
 
   StateVector corrected_state;
-  for (int i = 0; i < dim_measure_; ++i){
+  for (int i = 0; i < dim_measure_; ++i) {
     corrected_state.at(i) = data.at<float>(i, 0);
   }
 
