@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef SORT_TRACKER_KALMAN_FILTER_H
-#define SORT_TRACKER_KALMAN_FILTER_H
-
 #include <vector>
 
 #include "main/utils/tracker_helper.h"
@@ -135,5 +132,3 @@ class SortTracker {
 };
 
 }  // namespace Tracker
-
-#endif  // SORT_TRACKER_KALMAN_FILTER_H
