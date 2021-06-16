@@ -1,5 +1,7 @@
 #include "tracker_helper.h"
 
+#include <iostream>
+
 namespace Tracker {
 
 // Convert bounding box from [cx,cy,s,r] to [x,y,w,h] style vector.
@@ -25,6 +27,41 @@ StateVector get_state_from_bbox(const StateVector& bbox) {
   float ratio = bbox.at(2) / bbox.at(3);
 
   StateVector result{center_x, center_y, area, ratio};
+
+  return result;
+}
+
+// calculate IoU between two axis-aligned bboxes
+float calculate_iou(const StateVector& bbox_1, const StateVector& bbox_2) {
+  float x_left = std::max(bbox_1.at(0), bbox_2.at(0));
+  float y_top = std::max(bbox_1.at(1), bbox_2.at(1));
+  float x_right = std::min(bbox_1.at(0) + bbox_1.at(2), bbox_2.at(0) + bbox_2.at(2));
+  float y_bottom = std::min(bbox_1.at(1) + bbox_1.at(3), bbox_2.at(1) + bbox_2.at(3));
+
+  if (x_right < x_left || y_bottom < y_top) {
+    return .0f;
+  }
+
+  float intersection = (x_right - x_left) * (y_bottom - y_top);
+  float area_1 = bbox_1.at(2) * bbox_1.at(3);
+  float area_2 = bbox_2.at(2) * bbox_2.at(3);
+
+  float iou = intersection / (area_1 + area_2 - intersection + 1e-6);
+  return iou;
+}
+
+cv::Mat calculate_pairwise_iou(const std::vector<StateVector>& first, const std::vector<StateVector>& second) {
+  int n = first.size();
+  int m = second.size();
+
+  cv::Mat result = cv::Mat(n, m, CV_32F);
+
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < m; ++j) {
+      auto iou_i_j = calculate_iou(first.at(i), second.at(j));
+      result.at<float>(i, j) = iou_i_j;
+    }
+  }
 
   return result;
 }
