@@ -8,6 +8,7 @@
 
 namespace Tracker {
 using StateVector = std::array<float, 4>;
+using StateVectorWithId = std::array<float, 5>;
 
 StateVector get_bbox_from_state(const StateVector&);
 StateVector get_state_from_bbox(const StateVector&);

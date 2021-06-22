@@ -1,5 +1,7 @@
 #include "kalman_tracker.h"
 
+#include <algorithm>
+
 namespace Tracker {
 
 // Correct step
@@ -56,74 +58,75 @@ StateVector KalmanVelocityTracker::get_state_bbox() {
 }
 
 // SortTracker constructor
-SortTracker::SortTracker(int max_age, int min_hits, float iou_threshold) {
+SortTracker::SortTracker(int max_age, int min_hits, int num_init_frames, float iou_threshold) {
   frame_count_ = 0;
   tracker_count_ = 0;
 
   max_age_ = max_age;
   min_hits_ = min_hits;
+  num_init_frames_ = num_init_frames;
   iou_threshold_ = iou_threshold;
 }
 
 // SortTracker update
-std::vector<StateVector> SortTracker::update(const std::vector<StateVector>& detections) {
+std::vector<StateVectorWithId> SortTracker::update(const std::vector<StateVector>& detections) {
+  // update time step and all trackers' internal time steps
+  frame_count_++;
+
   std::vector<StateVector> predictions;
   for (size_t i = 0; i < trackers_.size(); ++i) {
     auto prediction = trackers_.at(i).predict();
     predictions.push_back(prediction);
   }
 
-  // calculate IOU
-  auto iou_matrix = calculate_pairwise_iou(detections, predictions);
-  std::cout << iou_matrix.rows << " " << iou_matrix.cols << std::endl;
+  bool is_iou_valid = detections.size() != 0 || predictions.size() == 0;
+  if (is_iou_valid) {
+    // calculate negated iou matrix and solve matching problem
+    auto iou_matrix = calculate_pairwise_iou(detections, predictions);
+    auto cost_matrix = (-1) * iou_matrix;
+    auto assignment_indices = solve_assignment_(cost_matrix);
 
-  // negate cost matrix for minimization task
-  auto cost_matrix = (-1) * iou_matrix;
-  auto assignment_indices = solve_assignment_(cost_matrix);
+    // update matched trackers with corresponding detections, create new tracker otherwise
+    for (size_t i = 0; i < detections.size(); ++i) {
+      int match_idx = assignment_indices.at(i);
 
-  //
-  for (auto i = 0; i < assignment_indices.size(); ++i) {
-    std::cout << "assignment" << assignment_indices.at(i) << std::endl;
-  }
-
-  // update matched trackers with detections, create new tracker otherwise
-  for (auto i = 0; i < detections.size(); ++i) {
-    int match_idx = assignment_indices.at(i);
-    if (assignment_indices.size() == 0 || match_idx == -1) {
-      KalmanVelocityTracker new_tracker = KalmanVelocityTracker(detections.at(i), tracker_count_++);
-      trackers_.push_back(new_tracker);
-    } else {
-      auto temp = trackers_.at(match_idx).update(detections.at(i));
-
-      for (auto k = 0; k < temp.size(); ++k) {
-        std::cout << temp.at(k) << " ";
+      if (assignment_indices.size() == 0 || match_idx == -1) {
+        KalmanVelocityTracker new_tracker = KalmanVelocityTracker(detections.at(i), tracker_count_++);
+        trackers_.push_back(new_tracker);
+      } else {
+        trackers_.at(match_idx).update(detections.at(i));
       }
     }
   }
 
-  std::cout << "lol4" << std::endl;
-  //
-  std::vector<StateVector> result;
+  // construct result - bboxes with corresponding tracker id
+  std::vector<StateVectorWithId> result;
   auto it = trackers_.begin();
+
   while (it != trackers_.end()) {
     auto tracker = *it;
 
-    bool is_initialized = tracker.hits >= min_hits_ || frame_count_ <= min_hits_;
+    // at the beginning also consider tracks that are at ongoing init
+    bool is_initialized = tracker.hits >= min_hits_ || frame_count_ <= num_init_frames_;
     bool is_valid = is_initialized && (tracker.time_since_update <= max_age_);
 
     if (is_valid) {
       auto current_state = tracker.get_state_bbox();
-      result.push_back(current_state);
+      StateVectorWithId temp;
+
+      std::copy_n(current_state.begin(), current_state.size(), temp.begin());
+      temp.back() = tracker.id;
+      result.push_back(temp);
     }
 
-    //     TODO: fix deleting data structure
-    //    if (tracker.time_since_update > max_age_){
-    //      trackers_.erase(it);
-    //    }
-    //    else {
-    //      ++it;
-    //    }
-    it++;
+    if (tracker.time_since_update > max_age_) {
+      // TODO: ask why this not working
+      // std::iter_swap(it, trackers_.end());
+      std::swap(tracker, trackers_.back());
+      trackers_.pop_back();
+    } else {
+      ++it;
+    }
   }
 
   return result;

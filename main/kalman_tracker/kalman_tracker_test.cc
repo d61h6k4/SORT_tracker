@@ -21,37 +21,76 @@ TEST_F(KalmanVelocityTrackerTest, VelocityStateInitializationSuccess) {
   EXPECT_FLOAT_EQ(state_bbox.at(1), 1);
   EXPECT_FLOAT_EQ(state_bbox.at(2), 1);
   EXPECT_FLOAT_EQ(state_bbox.at(3), 1);
+
+  auto prediction = tracker.predict();
+  EXPECT_EQ(prediction.size(), 4);
 }
 
-// TEST_F(SortTrackerTest, SortTrackerPredictionSuccess) {
-//  Tracker::SortTracker sort_tracker(20, 1, 0.1);
-//
-//  std::vector<Tracker::StateVector> first_detections = {{0, 0, 20, 20}, {100, 50, 40, 20}};
-//  auto first_results = sort_tracker.update(first_detections);
-//
-//  for (const auto& item : first_results) {
-//    for (int i = 0; i < item.size(); ++i) {
-//      std::cout << item.at(i) << " ";
-//    }
-//    std::cout << std::endl;
-//  }
-//
-//  std::vector<Tracker::StateVector> second_detections = {{2, 2, 18, 28}};
-//  auto second_results = sort_tracker.update(second_detections);
-//
-//  for (const auto& item : first_results) {
-//    for (int i = 0; i < item.size(); ++i) {
-//      std::cout << item.at(i) << " ";
-//    }
-//    std::cout << std::endl;
-//  }
+TEST_F(KalmanVelocityTrackerTest, VelocityKalmanFilterTrackProgressSuccess) {
+  Tracker::StateVector init_bbox = {100, 100, 10, 10};
+  Tracker::KalmanVelocityTracker tracker(init_bbox, 0);
 
-//  auto result_bbox = second_results.at(0);
-//  EXPECT_FLOAT_EQ(result_bbox.at(0), 2);
-//  EXPECT_FLOAT_EQ(result_bbox.at(1), 2);
-//  EXPECT_FLOAT_EQ(result_bbox.at(2), 18);
-//  EXPECT_FLOAT_EQ(result_bbox.at(3), 28);
-//}
+  StateVector res_prediction;
+  StateVector res_update;
+  StateVector input = init_bbox;
+
+  for (int i = 0; i < 50; ++i) {
+    res_prediction = tracker.predict();
+
+    input.at(0) -= 2;
+    input.at(1) -= 2;
+    res_update = tracker.update(input);
+  }
+
+  EXPECT_NEAR(res_prediction.at(0), 0, 1e-3);
+  EXPECT_NEAR(res_prediction.at(1), 0, 1e-3);
+  EXPECT_NEAR(res_prediction.at(2), 10, 1e-3);
+  EXPECT_NEAR(res_prediction.at(3), 10, 1e-3);
+}
+
+TEST_F(SortTrackerTest, SortTrackerMatchingSuccess) {
+  Tracker::SortTracker sort_tracker(20, 1, 1, 0.1);
+
+  std::vector<Tracker::StateVector> first_detections = {{0, 0, 20, 20}, {100, 50, 40, 20}};
+  auto first_results = sort_tracker.update(first_detections);
+
+  std::vector<Tracker::StateVector> second_detections = {{2, 2, 18, 22}};
+  auto second_results = sort_tracker.update(second_detections);
+
+  EXPECT_EQ(second_results.size(), 1);
+
+  auto result_bbox = second_results.at(0);
+  EXPECT_FLOAT_EQ(result_bbox.at(4), 0);
+
+  EXPECT_NEAR(result_bbox.at(0), 2, 2);
+  EXPECT_NEAR(result_bbox.at(1), 2, 2);
+  EXPECT_NEAR(result_bbox.at(2), 18, 2);
+  EXPECT_NEAR(result_bbox.at(3), 22, 2);
+}
+
+TEST_F(SortTrackerTest, SortTrackerDeleteOldTrackersSuccess) {
+  int max_age = 5;
+  int min_hits = 1;
+  Tracker::SortTracker sort_tracker(max_age, min_hits, 1, 0.1);
+
+  std::vector<Tracker::StateVector> first_detections = {{0, 0, 20, 20}, {100, 50, 40, 20}};
+  std::vector<Tracker::StateVector> empty_detections;
+
+  // initialize trackers with min_hits
+  for (int i = 0; i < min_hits + 1; ++i) {
+    sort_tracker.update(first_detections);
+  }
+
+  // initialized trackers are stored for at most max_age frames
+  for (int i = 0; i < max_age; ++i) {
+    auto non_empty_updates = sort_tracker.update(empty_detections);
+    EXPECT_EQ(non_empty_updates.size(), 2);
+  }
+
+  // after max_age empty updates all trackers shall be deleted
+  auto empty_updates = sort_tracker.update(empty_detections);
+  EXPECT_EQ(empty_updates.size(), 0);
+}
 
 TEST_F(LinearAssignmentTest, LinearAssignmentGraphInitializationSuccess) {
   // clang-format off
