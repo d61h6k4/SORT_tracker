@@ -2,24 +2,26 @@
 
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
 #include "main/utils/tracker_helper.h"
 #include "opencv2/video/tracking.hpp"
+#include "ortools/algorithms/hungarian.h"
 #include "ortools/graph/graph.h"
 #include "ortools/graph/linear_assignment.h"
 
 namespace Tracker {
 
 // Choose a graph implementation (recommended StaticGraph<>).
-using Graph = util::StaticGraph<>;
+using Graph = util::ListGraph<int, int>;
 
 // Class for constant velocity motion model
 class KalmanVelocityTracker {
  public:
   KalmanVelocityTracker(int id) {
-    time_since_update_ = 0;
-    hits_ = 0;
-    hit_streak_ = 0;
-    age_ = 0;
+    time_since_update = 0;
+    hits = 0;
+    hit_streak = 0;
+    age = 0;
     id_ = id;
 
     filter_.init(dim_state_, dim_measure_);
@@ -102,14 +104,16 @@ class KalmanVelocityTracker {
   StateVector predict();
   StateVector update(const StateVector& observation);
 
+ public:
+  int time_since_update;
+  int hits;
+  int hit_streak;
+  int age;
+
  private:
   const int dim_state_ = 7;
   const int dim_measure_ = 4;
 
-  int time_since_update_;
-  int hits_;
-  int hit_streak_;
-  int age_;
   int id_;
 
   cv::KalmanFilter filter_;
@@ -120,15 +124,21 @@ class KalmanVelocityTracker {
 // class for unification of trackers and linear assignment solver
 class SortTracker {
  public:
-  StateVector update(const StateVector& detections);
+  SortTracker(int max_age = 5, int min_hits = 1, float iou_threshold = 0.1f);
+  std::vector<StateVector> update(const std::vector<StateVector>& detections);
 
  private:
-  void solve_assignment_(const cv::Mat& cost_matrix);
+  std::vector<int> solve_assignment_(const cv::Mat& cost_matrix);
 
  private:
   std::vector<KalmanVelocityTracker> trackers_;
 
-  int tracker_count_ = 0;
+  int frame_count_;
+  int tracker_count_;
+
+  int max_age_;
+  int min_hits_;
+  float iou_threshold_;
 };
 
 }  // namespace Tracker
