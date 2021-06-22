@@ -93,16 +93,16 @@ class KalmanVelocityTracker {
   }
 
   // create kalman filter with initial bbox state
-  KalmanVelocityTracker(const StateVector& init_bbox, int id) : KalmanVelocityTracker(id) {
+  KalmanVelocityTracker(const BboxVector& init_bbox, int id) : KalmanVelocityTracker(id) {
     auto init_state = get_state_from_bbox(init_bbox);
     for (int i = 0; i < dim_measure_; ++i) {
       filter_.statePost.at<float>(i, 0) = init_state.at(i);
     }
   }
 
-  StateVector get_state_bbox();
-  StateVector predict();
-  StateVector update(const StateVector& observation);
+  BboxVector get_state_bbox();
+  BboxVector predict();
+  BboxVector update(const BboxVector& observation);
 
  public:
   int time_since_update;
@@ -117,14 +117,14 @@ class KalmanVelocityTracker {
 
   cv::KalmanFilter filter_;
   cv::Mat measurement_;
-  std::vector<StateVector> history_;
+  std::vector<BboxVector> history_;
 };
 
 // class for unification of trackers and linear assignment solver
 class SortTracker {
  public:
   SortTracker(int max_age = 5, int min_hits = 1, int num_init_frames = 5, float iou_threshold = 0.1);
-  std::vector<StateVectorWithId> update(const std::vector<StateVector>& detections);
+  std::vector<BboxVectorWithId> update(const std::vector<BboxVector>& detections);
 
  private:
   std::vector<int> solve_assignment_(const cv::Mat& cost_matrix);

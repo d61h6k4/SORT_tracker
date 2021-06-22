@@ -5,7 +5,7 @@
 namespace Tracker {
 
 // Correct step
-StateVector KalmanVelocityTracker::update(const StateVector& observed_bbox) {
+BboxVector KalmanVelocityTracker::update(const BboxVector& observed_bbox) {
   time_since_update = 0;
   history_.clear();
   hits += 1;
@@ -29,7 +29,7 @@ StateVector KalmanVelocityTracker::update(const StateVector& observed_bbox) {
 }
 
 // Predict step
-StateVector KalmanVelocityTracker::predict() {
+BboxVector KalmanVelocityTracker::predict() {
   auto prediction = filter_.predict();
   age += 1;
 
@@ -51,9 +51,14 @@ StateVector KalmanVelocityTracker::predict() {
 }
 
 // Return the current state vector
-StateVector KalmanVelocityTracker::get_state_bbox() {
-  cv::Mat s = filter_.statePost;
-  StateVector state = {s.at<float>(0, 0), s.at<float>(1, 0), s.at<float>(2, 0), s.at<float>(3, 0)};
+BboxVector KalmanVelocityTracker::get_state_bbox() {
+  cv::Mat state_post = filter_.statePost;
+  StateVector state;
+
+  for (int i = 0; i < dim_state_; ++i) {
+    state.at(i) = state_post.at<float>(i, 0);
+  }
+
   return get_bbox_from_state(state);
 }
 
@@ -69,11 +74,11 @@ SortTracker::SortTracker(int max_age, int min_hits, int num_init_frames, float i
 }
 
 // SortTracker update
-std::vector<StateVectorWithId> SortTracker::update(const std::vector<StateVector>& detections) {
+std::vector<BboxVectorWithId> SortTracker::update(const std::vector<BboxVector>& detections) {
   // update time step and all trackers' internal time steps
   frame_count_++;
 
-  std::vector<StateVector> predictions;
+  std::vector<BboxVector> predictions;
   for (size_t i = 0; i < trackers_.size(); ++i) {
     auto prediction = trackers_.at(i).predict();
     predictions.push_back(prediction);
@@ -100,7 +105,7 @@ std::vector<StateVectorWithId> SortTracker::update(const std::vector<StateVector
   }
 
   // construct result - bboxes with corresponding tracker id
-  std::vector<StateVectorWithId> result;
+  std::vector<BboxVectorWithId> result;
   auto it = trackers_.begin();
 
   while (it != trackers_.end()) {
@@ -112,7 +117,7 @@ std::vector<StateVectorWithId> SortTracker::update(const std::vector<StateVector
 
     if (is_valid) {
       auto current_state = tracker.get_state_bbox();
-      StateVectorWithId temp;
+      BboxVectorWithId temp;
 
       std::copy_n(current_state.begin(), current_state.size(), temp.begin());
       temp.back() = tracker.id;

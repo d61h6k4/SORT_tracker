@@ -12,7 +12,7 @@ class SortTrackerTest : public ::testing::Test {};
 TEST_F(KalmanVelocityTrackerTest, VelocityEmptyInitializationSuccess) { Tracker::KalmanVelocityTracker tracker(0); }
 
 TEST_F(KalmanVelocityTrackerTest, VelocityStateInitializationSuccess) {
-  Tracker::StateVector init_bbox = {1, 1, 1, 1};
+  Tracker::BboxVector init_bbox = {1, 1, 1, 1};
   Tracker::KalmanVelocityTracker tracker(init_bbox, 0);
 
   auto state_bbox = tracker.get_state_bbox();
@@ -27,12 +27,12 @@ TEST_F(KalmanVelocityTrackerTest, VelocityStateInitializationSuccess) {
 }
 
 TEST_F(KalmanVelocityTrackerTest, VelocityKalmanFilterTrackProgressSuccess) {
-  Tracker::StateVector init_bbox = {100, 100, 10, 10};
+  Tracker::BboxVector init_bbox = {100, 100, 10, 10};
   Tracker::KalmanVelocityTracker tracker(init_bbox, 0);
 
-  StateVector res_prediction;
-  StateVector res_update;
-  StateVector input = init_bbox;
+  BboxVector res_prediction;
+  BboxVector res_update;
+  BboxVector input = init_bbox;
 
   for (int i = 0; i < 50; ++i) {
     res_prediction = tracker.predict();
@@ -51,10 +51,10 @@ TEST_F(KalmanVelocityTrackerTest, VelocityKalmanFilterTrackProgressSuccess) {
 TEST_F(SortTrackerTest, SortTrackerMatchingSuccess) {
   Tracker::SortTracker sort_tracker(20, 1, 1, 0.1);
 
-  std::vector<Tracker::StateVector> first_detections = {{0, 0, 20, 20}, {100, 50, 40, 20}};
+  std::vector<Tracker::BboxVector> first_detections = {{0, 0, 20, 20}, {100, 50, 40, 20}};
   auto first_results = sort_tracker.update(first_detections);
 
-  std::vector<Tracker::StateVector> second_detections = {{2, 2, 18, 22}};
+  std::vector<Tracker::BboxVector> second_detections = {{2, 2, 18, 22}};
   auto second_results = sort_tracker.update(second_detections);
 
   EXPECT_EQ(second_results.size(), 1);
@@ -73,8 +73,8 @@ TEST_F(SortTrackerTest, SortTrackerDeleteOldTrackersSuccess) {
   int min_hits = 1;
   Tracker::SortTracker sort_tracker(max_age, min_hits, 1, 0.1);
 
-  std::vector<Tracker::StateVector> first_detections = {{0, 0, 20, 20}, {100, 50, 40, 20}};
-  std::vector<Tracker::StateVector> empty_detections;
+  std::vector<Tracker::BboxVector> first_detections = {{0, 0, 20, 20}, {100, 50, 40, 20}};
+  std::vector<Tracker::BboxVector> empty_detections;
 
   // initialize trackers with min_hits
   for (int i = 0; i < min_hits + 1; ++i) {

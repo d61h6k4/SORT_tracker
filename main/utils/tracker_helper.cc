@@ -5,7 +5,7 @@
 namespace Tracker {
 
 // Convert bounding box from [cx,cy,s,r] to [x,y,w,h] style vector.
-StateVector get_bbox_from_state(const StateVector& vec) {
+BboxVector get_bbox_from_state(const StateVector& vec) {
   float w = std::sqrt(vec.at(2) * vec.at(3));
   float h = vec.at(2) / w;
   float x = (vec.at(0) - w / 2);
@@ -14,25 +14,25 @@ StateVector get_bbox_from_state(const StateVector& vec) {
   if (x < 0 && vec.at(0) > 0) x = 0;
   if (y < 0 && vec.at(1) > 0) y = 0;
 
-  StateVector result{x, y, w, h};
+  BboxVector result{x, y, w, h};
 
   return result;
 }
 
 // Convert bounding box from [x,y,w,h] to [cx,cy,s,r] style.
-StateVector get_state_from_bbox(const StateVector& bbox) {
+StateVector get_state_from_bbox(const BboxVector& bbox) {
   float center_x = bbox.at(0) + bbox.at(2) / 2;
   float center_y = bbox.at(1) + bbox.at(3) / 2;
   float area = bbox.at(2) * bbox.at(3);
   float ratio = bbox.at(2) / bbox.at(3);
 
-  StateVector result{center_x, center_y, area, ratio};
+  StateVector result{center_x, center_y, area, ratio, 0, 0, 0};
 
   return result;
 }
 
 // calculate IoU between two axis-aligned bboxes
-float calculate_iou(const StateVector& bbox_1, const StateVector& bbox_2) {
+float calculate_iou(const BboxVector& bbox_1, const BboxVector& bbox_2) {
   float x_left = std::max(bbox_1.at(0), bbox_2.at(0));
   float y_top = std::max(bbox_1.at(1), bbox_2.at(1));
   float x_right = std::min(bbox_1.at(0) + bbox_1.at(2), bbox_2.at(0) + bbox_2.at(2));
@@ -50,7 +50,7 @@ float calculate_iou(const StateVector& bbox_1, const StateVector& bbox_2) {
   return iou;
 }
 
-cv::Mat calculate_pairwise_iou(const std::vector<StateVector>& first, const std::vector<StateVector>& second) {
+cv::Mat calculate_pairwise_iou(const std::vector<BboxVector>& first, const std::vector<BboxVector>& second) {
   int n = first.size();
   int m = second.size();
 
