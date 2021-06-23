@@ -84,23 +84,24 @@ std::vector<BboxVectorWithId> SortTracker::update(const std::vector<BboxVector>&
     predictions.push_back(prediction);
   }
 
-  bool is_iou_valid = detections.size() != 0 || predictions.size() == 0;
+  std::vector<int> assignment_indices(detections.size(), -1);
+  bool is_iou_valid = detections.size() != 0 || predictions.size() != 0;
   if (is_iou_valid) {
     // calculate negated iou matrix and solve matching problem
     auto iou_matrix = calculate_pairwise_iou(detections, predictions);
     auto cost_matrix = (-1) * iou_matrix;
-    auto assignment_indices = solve_assignment_(cost_matrix);
+    assignment_indices = solve_assignment_(cost_matrix);
+  }
 
-    // update matched trackers with corresponding detections, create new tracker otherwise
-    for (size_t i = 0; i < detections.size(); ++i) {
-      int match_idx = assignment_indices.at(i);
+  // update matched trackers with corresponding detections, create new tracker otherwise
+  for (size_t i = 0; i < detections.size(); ++i) {
+    int match_idx = assignment_indices.at(i);
 
-      if (assignment_indices.size() == 0 || match_idx == -1) {
-        KalmanVelocityTracker new_tracker = KalmanVelocityTracker(detections.at(i), tracker_count_++);
-        trackers_.push_back(new_tracker);
-      } else {
-        trackers_.at(match_idx).update(detections.at(i));
-      }
+    if (assignment_indices.size() == 0 || match_idx == -1) {
+      KalmanVelocityTracker new_tracker = KalmanVelocityTracker(detections.at(i), tracker_count_++);
+      trackers_.push_back(new_tracker);
+    } else {
+      trackers_.at(match_idx).update(detections.at(i));
     }
   }
 
