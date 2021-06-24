@@ -100,7 +100,7 @@ class KalmanVelocityTracker {
     }
   }
 
-  BboxVector get_state_bbox();
+  BboxVector get_state_bbox() const;
   BboxVector predict();
   BboxVector update(const BboxVector& observation);
 
@@ -117,7 +117,6 @@ class KalmanVelocityTracker {
 
   cv::KalmanFilter filter_;
   cv::Mat measurement_;
-  std::vector<BboxVector> history_;
 };
 
 // class for unification of trackers and linear assignment solver

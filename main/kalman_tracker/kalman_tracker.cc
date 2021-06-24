@@ -7,7 +7,6 @@ namespace Tracker {
 // Correct step
 BboxVector KalmanVelocityTracker::update(const BboxVector& observed_bbox) {
   time_since_update = 0;
-  history_.clear();
   hits += 1;
   hit_streak += 1;
 
@@ -46,12 +45,11 @@ BboxVector KalmanVelocityTracker::predict() {
 
   auto predict_box = get_bbox_from_state(state);
 
-  history_.push_back(predict_box);
-  return history_.back();
+  return predict_box;
 }
 
 // Return the current state vector
-BboxVector KalmanVelocityTracker::get_state_bbox() {
+BboxVector KalmanVelocityTracker::get_state_bbox() const {
   cv::Mat state_post = filter_.statePost;
   StateVector state;
 
@@ -107,11 +105,7 @@ std::vector<BboxVectorWithId> SortTracker::update(const std::vector<BboxVector>&
 
   // construct result - bboxes with corresponding tracker id
   std::vector<BboxVectorWithId> result;
-  auto it = trackers_.begin();
-
-  while (it != trackers_.end()) {
-    auto tracker = *it;
-
+  std::for_each(trackers_.begin(), trackers_.end(), [this, &result](const KalmanVelocityTracker& tracker) {
     // at the beginning also consider tracks that are at ongoing init
     bool is_initialized = tracker.hits >= min_hits_ || frame_count_ <= num_init_frames_;
     bool is_valid = is_initialized && (tracker.time_since_update <= max_age_);
@@ -120,20 +114,14 @@ std::vector<BboxVectorWithId> SortTracker::update(const std::vector<BboxVector>&
       auto current_state = tracker.get_state_bbox();
       BboxVectorWithId temp;
 
-      std::copy_n(current_state.begin(), current_state.size(), temp.begin());
+      std::copy(current_state.begin(), current_state.end(), temp.begin());
       temp.back() = tracker.id;
       result.push_back(temp);
     }
+  });
 
-    if (tracker.time_since_update > max_age_) {
-      // TODO: ask why this not working
-      // std::iter_swap(it, trackers_.end());
-      std::swap(tracker, trackers_.back());
-      trackers_.pop_back();
-    } else {
-      ++it;
-    }
-  }
+  auto remove_cond = [this](const KalmanVelocityTracker& x) { return x.time_since_update > max_age_; };
+  trackers_.erase(std::remove_if(trackers_.begin(), trackers_.end(), remove_cond), trackers_.end());
 
   return result;
 }
