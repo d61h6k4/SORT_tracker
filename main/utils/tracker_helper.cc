@@ -1,7 +1,5 @@
 #include "tracker_helper.h"
 
-#include <iostream>
-
 namespace Tracker {
 
 // Convert bounding box from [cx,cy,s,r] to [x,y,w,h] style vector.

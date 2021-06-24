@@ -1,15 +1,14 @@
 #pragma once
 
 #include <array>
-#include <cmath>
 #include <vector>
 
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core/mat.hpp"
 
 namespace Tracker {
-using BboxVector = std::array<float, 4>;
-using BboxVectorWithId = std::array<float, 5>;
-using StateVector = std::array<float, 7>;
+using BboxVector = std::array<float, 4>;        // (x, y, w, h)
+using BboxVectorWithId = std::array<float, 5>;  // (x, y, w, h, id)
+using StateVector = std::array<float, 7>;       // (cx, cy, area, scale_ratio_w/h, cx', cy', area')
 
 BboxVector get_bbox_from_state(const StateVector&);
 StateVector get_state_from_bbox(const BboxVector&);
