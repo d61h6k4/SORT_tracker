@@ -2,27 +2,29 @@
 
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
 #include "main/utils/tracker_helper.h"
 #include "opencv2/video/tracking.hpp"
+#include "ortools/algorithms/hungarian.h"
 #include "ortools/graph/graph.h"
 #include "ortools/graph/linear_assignment.h"
 
 namespace Tracker {
 
 // Choose a graph implementation (recommended StaticGraph<>).
-using Graph = util::StaticGraph<>;
+using Graph = util::ListGraph<int, int>;
 
 // Class for constant velocity motion model
 class KalmanVelocityTracker {
  public:
-  KalmanVelocityTracker(int id) {
-    time_since_update_ = 0;
-    hits_ = 0;
-    hit_streak_ = 0;
-    age_ = 0;
-    id_ = id;
+  KalmanVelocityTracker(int current_id) {
+    time_since_update = 0;
+    hits = 0;
+    hit_streak = 0;
+    age = 0;
+    id = current_id;
 
-    filter_.init(dim_state_, dim_measure_);
+    filter_.init(dim_state_, dim_measure_, 0);
 
     // clang-format off
     std::vector<float> measurement_matrix{
@@ -42,14 +44,14 @@ class KalmanVelocityTracker {
         0, 0, 0, 0, 0, 0, 1
     };
 
-    std::vector<float> measurement_uncertainty_data{
-        1e1, 0, 0, 0, 0, 0, 0,
-        0, 1e1, 0, 0, 0, 0, 0,
-        0, 0, 1e1, 0, 0, 0, 0,
-        0, 0, 0, 1e1, 0, 0, 0,
-        0, 0, 0, 0, 1e4, 0, 0,
-        0, 0, 0, 0, 0, 1e4, 0,
-        0, 0, 0, 0, 0, 0, 1e4
+    std::vector<float> error_covariance_data{
+        1e0, 0, 0, 0, 0, 0, 0,
+        0, 1e0, 0, 0, 0, 0, 0,
+        0, 0, 1e0, 0, 0, 0, 0,
+        0, 0, 0, 1e0, 0, 0, 0,
+        0, 0, 0, 0, 1e1, 0, 0,
+        0, 0, 0, 0, 0, 1e1, 0,
+        0, 0, 0, 0, 0, 0, 1e1
     };
 
     std::vector<float> process_noise_data{
@@ -62,7 +64,7 @@ class KalmanVelocityTracker {
         0, 0, 0, 0, 0, 0, 1e-4
     };
 
-    std::vector<float> state_uncertainty_data{
+    std::vector<float> observation_noise_data{
         1e0, 0, 0, 0,
         0, 1e0, 0, 0,
         0, 0, 1e1, 0,
@@ -71,64 +73,71 @@ class KalmanVelocityTracker {
     // clang-format on
 
     cv::Mat measurement_matrix_init(dim_measure_, dim_state_, CV_32F, measurement_matrix.data());
-    filter_.measurementMatrix = measurement_matrix_init;
+    measurement_matrix_init.copyTo(filter_.measurementMatrix);
 
     // transition matrix F
     cv::Mat transition_matrix_init(dim_state_, dim_state_, CV_32F, transition_data.data());
-    filter_.transitionMatrix = transition_matrix_init;
+    transition_matrix_init.copyTo(filter_.transitionMatrix);
 
     // process uncertainty matrix Q
     cv::Mat process_noise_init(dim_state_, dim_state_, CV_32F, process_noise_data.data());
-    filter_.processNoiseCov = process_noise_init;
+    process_noise_init.copyTo(filter_.processNoiseCov);
 
     // state uncertainty matrix R
-    cv::Mat state_uncertainty_init(dim_measure_, dim_measure_, CV_32F, state_uncertainty_data.data());
-    filter_.measurementNoiseCov = state_uncertainty_init;
+    cv::Mat observation_noise_init(dim_measure_, dim_measure_, CV_32F, observation_noise_data.data());
+    observation_noise_init.copyTo(filter_.measurementNoiseCov);
 
     // uncertainty covariance matrix P
-    cv::Mat measurement_noise_init(dim_state_, dim_state_, CV_32F, measurement_uncertainty_data.data());
-    filter_.errorCovPost = measurement_noise_init;
+    cv::Mat error_covariance_init(dim_state_, dim_state_, CV_32F, error_covariance_data.data());
+    error_covariance_init.copyTo(filter_.errorCovPost);
   }
 
   // create kalman filter with initial bbox state
-  KalmanVelocityTracker(const StateVector& init_bbox, int id) : KalmanVelocityTracker(id) {
+  KalmanVelocityTracker(const BboxVector& init_bbox, int id) : KalmanVelocityTracker(id) {
     auto init_state = get_state_from_bbox(init_bbox);
     for (int i = 0; i < dim_measure_; ++i) {
-      filter_.statePost.at<float>(i) = init_state.at(i);
+      filter_.statePost.at<float>(i, 0) = init_state.at(i);
     }
   }
 
-  StateVector get_state_bbox();
-  StateVector predict();
-  StateVector update(const StateVector& observation);
+  BboxVector get_state_bbox() const;
+  BboxVector predict();
+  BboxVector update(const BboxVector& observation);
+
+ public:
+  int time_since_update;
+  int hits;
+  int hit_streak;
+  int age;
+  int id;
 
  private:
-  const int dim_state_ = 7;
-  const int dim_measure_ = 4;
-
-  int time_since_update_;
-  int hits_;
-  int hit_streak_;
-  int age_;
-  int id_;
+  int dim_state_ = 7;
+  int dim_measure_ = 4;
 
   cv::KalmanFilter filter_;
   cv::Mat measurement_;
-  std::vector<StateVector> history_;
 };
 
 // class for unification of trackers and linear assignment solver
 class SortTracker {
  public:
-  StateVector update(const StateVector& detections);
+  SortTracker(int max_age = 5, int min_hits = 1, int num_init_frames = 5, float iou_threshold = 0.1);
+  std::vector<BboxVectorWithId> update(const std::vector<BboxVector>& detections);
 
  private:
-  void solve_assignment_(const cv::Mat& cost_matrix);
+  std::vector<int> solve_assignment_(const cv::Mat& cost_matrix);
 
  private:
   std::vector<KalmanVelocityTracker> trackers_;
 
-  int tracker_count_ = 0;
+  int frame_count_;
+  int tracker_count_;
+
+  int max_age_;
+  int min_hits_;
+  int num_init_frames_;
+  float iou_threshold_;
 };
 
 }  // namespace Tracker

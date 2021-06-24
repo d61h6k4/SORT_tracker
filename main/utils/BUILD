@@ -4,6 +4,9 @@ cc_library(
     hdrs = ["tracker_helper.h"],
     srcs = ["tracker_helper.cc"],
     visibility = ["//visibility:public"],
+    deps = [
+        "@opencv//:opencv",
+    ]
 )
 
 cc_test(

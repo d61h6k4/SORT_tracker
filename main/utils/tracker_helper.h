@@ -1,11 +1,18 @@
 #pragma once
 
 #include <array>
-#include <cmath>
+#include <vector>
+
+#include "opencv2/core/mat.hpp"
 
 namespace Tracker {
-using StateVector = std::array<float, 4>;
+using BboxVector = std::array<float, 4>;        // (x, y, w, h)
+using BboxVectorWithId = std::array<float, 5>;  // (x, y, w, h, id)
+using StateVector = std::array<float, 7>;       // (cx, cy, area, scale_ratio_w/h, cx', cy', area')
 
-StateVector get_bbox_from_state(const StateVector&);
-StateVector get_state_from_bbox(const StateVector&);
+BboxVector get_bbox_from_state(const StateVector&);
+StateVector get_state_from_bbox(const BboxVector&);
+
+float calculate_iou(const BboxVector&, const BboxVector&);
+cv::Mat calculate_pairwise_iou(const std::vector<BboxVector>&, const std::vector<BboxVector>&);
 }  // namespace Tracker

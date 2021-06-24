@@ -9,6 +9,8 @@ cc_library(
         "@com_google_ortools//ortools/base",
         "@com_google_ortools//ortools/graph",
         "@com_google_ortools//ortools/graph:linear_assignment",
+        "@com_google_ortools//ortools/algorithms:hungarian",
+        "@com_google_absl//absl/container:flat_hash_map"
     ],
     visibility = ["//visibility:public"],
 )

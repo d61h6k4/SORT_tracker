@@ -43,4 +43,4 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-main
 
       - name: Run Tests
-        run: bazel test //...
+        run: bazel test //... --test_output=all
