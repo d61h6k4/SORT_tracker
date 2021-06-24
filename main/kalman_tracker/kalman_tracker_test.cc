@@ -1,7 +1,7 @@
 #include "main/kalman_tracker/kalman_tracker.h"
 
 #include "gtest/gtest.h"
-#include "opencv2/video/tracking.hpp"
+#include "opencv2/core/mat.hpp"
 
 namespace Tracker {
 

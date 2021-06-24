@@ -85,7 +85,7 @@ std::vector<BboxVectorWithId> SortTracker::update(const std::vector<BboxVector>&
   }
 
   std::vector<int> assignment_indices(detections.size(), -1);
-  bool is_iou_valid = detections.size() != 0 || predictions.size() != 0;
+  bool is_iou_valid = detections.size() != 0 && predictions.size() != 0;
   if (is_iou_valid) {
     // calculate negated iou matrix and solve matching problem
     auto iou_matrix = calculate_pairwise_iou(detections, predictions);
