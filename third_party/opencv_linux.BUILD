@@ -15,17 +15,17 @@ cc_library(
     name = "opencv",
     srcs = glob(
         [
-            "lib/x86_64-linux-gnu/libopencv_core.so",
-            "lib/x86_64-linux-gnu/libopencv_calib3d.so",
-            "lib/x86_64-linux-gnu/libopencv_features2d.so",
-            "lib/x86_64-linux-gnu/libopencv_highgui.so",
-            "lib/x86_64-linux-gnu/libopencv_imgcodecs.so",
-            "lib/x86_64-linux-gnu/libopencv_imgproc.so",
-            "lib/x86_64-linux-gnu/libopencv_video.so",
-            "lib/x86_64-linux-gnu/libopencv_videoio.so",
-            "lib/x86_64-linux-gnu/libopencv_cudaarithm.so",
-            "lib/x86_64-linux-gnu/libopencv_cudaimgproc.so",
-            "lib/x86_64-linux-gnu/libopencv_cudawarping.so"
+            "lib/libopencv_core.so",
+            "lib/libopencv_calib3d.so",
+            "lib/libopencv_features2d.so",
+            "lib/libopencv_highgui.so",
+            "lib/libopencv_imgcodecs.so",
+            "lib/libopencv_imgproc.so",
+            "lib/libopencv_video.so",
+            "lib/libopencv_videoio.so",
+            "lib/libopencv_cudaarithm.so",
+            "lib/libopencv_cudaimgproc.so",
+            "lib/libopencv_cudawarping.so"
         ],
     ),
     hdrs = glob([
