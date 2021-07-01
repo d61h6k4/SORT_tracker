@@ -70,7 +70,7 @@ http_archive(
 )
 
 new_local_repository(
-    name = "opencv",
+    name = "linux_opencv",
     build_file = "//third_party:opencv_linux.BUILD",
-    path = "/usr",
+    path = "/usr/local",
 )

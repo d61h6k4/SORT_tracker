@@ -5,7 +5,7 @@ cc_library(
     srcs = ["tracker_helper.cc"],
     visibility = ["//visibility:public"],
     deps = [
-        "@opencv//:opencv",
+        "@linux_opencv//:opencv",
     ]
 )
 
