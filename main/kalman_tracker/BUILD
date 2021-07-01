@@ -5,7 +5,7 @@ cc_library(
     srcs = ["kalman_tracker.cc"],
     deps = [
         "//main/utils:tracker_helper",
-        "@opencv//:opencv",
+        "@linux_opencv//:opencv",
         "@com_google_ortools//ortools/base",
         "@com_google_ortools//ortools/graph",
         "@com_google_ortools//ortools/graph:linear_assignment",
