@@ -39,7 +39,7 @@ git_repository(
 
 git_repository(
     name = "com_google_ortools",
-    commit = "fa84bc0", # release v8.2
+    commit = "8d19323", # release v8.0
     remote = "https://github.com/google/or-tools.git",
 )
 
