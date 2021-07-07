@@ -9,14 +9,7 @@ If you don't have Bazel installed already, you can download it for free from
 
 Take a look at the [WORKSPACE](WORKSPACE) file.
 
-<a name="build"></a>
-# Build
-On any *\*NIX* (MacOS, GNU/Linux) platform:
+# Unit Tests
 ```sh
-bazel build --cxxopt=-std=c++17 //main:template
-```
-
-Run Unit Tests
-```sh
-bazel test //main/kalman_tracker:kalman_tracker_test --test_output=all
+bazel test //... --test_output=all
 ```
