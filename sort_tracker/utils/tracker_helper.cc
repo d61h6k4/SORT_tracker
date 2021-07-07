@@ -5,7 +5,7 @@
 namespace Tracker {
 
 // Convert bounding box [x,y,w,h,score,class_id,track_id] to [x,y,w,h] style vector.
-BboxVector get_bbox_from_detection(const DetectionVector & det) {;
+BboxVector get_bbox_from_detection(const DetectionVector& det) {
   BboxVector result;
   std::copy(det.begin(), det.begin() + 4, result.begin());
 

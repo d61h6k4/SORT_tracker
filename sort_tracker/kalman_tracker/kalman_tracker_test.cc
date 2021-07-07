@@ -11,7 +11,7 @@ class SortTrackerTest : public ::testing::Test {};
 
 TEST_F(KalmanVelocityTrackerTest, VelocityEmptyInitializationSuccess) { Tracker::KalmanVelocityTracker tracker(0); }
 
-TEST_F(KalmanVelocityTrackerTest, VelocityStateInitializationSuccess) {
+TEST_F(KalmanVelocityTrackerTest, VelocityStateBboxInitializationSuccess) {
   Tracker::BboxVector init_bbox = {1, 1, 1, 1};
   Tracker::KalmanVelocityTracker tracker(init_bbox, 0);
 
@@ -26,13 +26,28 @@ TEST_F(KalmanVelocityTrackerTest, VelocityStateInitializationSuccess) {
   EXPECT_EQ(prediction.size(), 4);
 }
 
+TEST_F(KalmanVelocityTrackerTest, VelocityStateDetectionInitializationSuccess) {
+  Tracker::DetectionVector init_det = {1, 1, 1, 1, 1.0, 0, -1};
+  Tracker::KalmanVelocityTracker tracker(init_det, 0);
+
+  auto state_bbox = tracker.get_state_bbox();
+
+  EXPECT_FLOAT_EQ(state_bbox.at(0), 1);
+  EXPECT_FLOAT_EQ(state_bbox.at(1), 1);
+  EXPECT_FLOAT_EQ(state_bbox.at(2), 1);
+  EXPECT_FLOAT_EQ(state_bbox.at(3), 1);
+
+  auto prediction = tracker.predict();
+  EXPECT_EQ(prediction.size(), 4);
+}
+
 TEST_F(KalmanVelocityTrackerTest, VelocityKalmanFilterTrackProgressSuccess) {
-  Tracker::BboxVector init_bbox = {100, 100, 10, 10};
+  Tracker::DetectionVector init_bbox = {100, 100, 10, 10, 1.0, 0, -1};
   Tracker::KalmanVelocityTracker tracker(init_bbox, 0);
 
   BboxVector res_prediction;
-  BboxVector res_update;
-  BboxVector input = init_bbox;
+  DetectionVector res_update;
+  DetectionVector input = init_bbox;
 
   for (int i = 0; i < 50; ++i) {
     res_prediction = tracker.predict();
@@ -51,10 +66,10 @@ TEST_F(KalmanVelocityTrackerTest, VelocityKalmanFilterTrackProgressSuccess) {
 TEST_F(SortTrackerTest, SortTrackerMatchingSuccess) {
   Tracker::SortTracker sort_tracker(20, 1, 1, 0.1);
 
-  std::vector<Tracker::BboxVector> first_detections = {{0, 0, 20, 20}, {100, 50, 40, 20}};
+  std::vector<Tracker::DetectionVector> first_detections = {{0, 0, 20, 20, 0.9, 0, -1}, {100, 50, 40, 20, 0.8, 0, -1}};
   auto first_results = sort_tracker.update(first_detections);
 
-  std::vector<Tracker::BboxVector> second_detections = {{2, 2, 18, 22}};
+  std::vector<Tracker::DetectionVector> second_detections = {{2, 2, 18, 22, 0.8, 0, -1}};
   auto second_results = sort_tracker.update(second_detections);
 
   EXPECT_EQ(second_results.size(), 1);
@@ -73,8 +88,8 @@ TEST_F(SortTrackerTest, SortTrackerDeleteOldTrackersSuccess) {
   int min_hits = 1;
   Tracker::SortTracker sort_tracker(max_age, min_hits, 1, 0.1);
 
-  std::vector<Tracker::BboxVector> first_detections = {{0, 0, 20, 20}, {100, 50, 40, 20}};
-  std::vector<Tracker::BboxVector> empty_detections;
+  std::vector<Tracker::DetectionVector> first_detections = {{0, 0, 20, 20, 0.9, 0, -1}, {100, 50, 40, 20, 0.8, 0, -1}};
+  std::vector<Tracker::DetectionVector> empty_detections;
 
   // initialize trackers with min_hits
   for (int i = 0; i < min_hits + 1; ++i) {
