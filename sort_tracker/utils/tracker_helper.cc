@@ -1,6 +1,16 @@
 #include "tracker_helper.h"
 
+#include <algorithm>
+
 namespace Tracker {
+
+// Convert bounding box [x,y,w,h,score,class_id,track_id] to [x,y,w,h] style vector.
+BboxVector get_bbox_from_detection(const DetectionVector & det) {;
+  BboxVector result;
+  std::copy(det.begin(), det.begin() + 4, result.begin());
+
+  return result;
+}
 
 // Convert bounding box from [cx,cy,s,r] to [x,y,w,h] style vector.
 BboxVector get_bbox_from_state(const StateVector& vec) {
