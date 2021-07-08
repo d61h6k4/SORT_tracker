@@ -3,11 +3,11 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "main/utils/tracker_helper.h"
 #include "opencv2/video/tracking.hpp"
 #include "ortools/algorithms/hungarian.h"
 #include "ortools/graph/graph.h"
 #include "ortools/graph/linear_assignment.h"
+#include "sort_tracker/utils/tracker_helper.h"
 
 namespace Tracker {
 
@@ -17,12 +17,13 @@ using Graph = util::ListGraph<int, int>;
 // Class for constant velocity motion model
 class KalmanVelocityTracker {
  public:
-  KalmanVelocityTracker(int current_id) {
-    time_since_update = 0;
-    hits = 0;
-    hit_streak = 0;
-    age = 0;
-    id = current_id;
+  KalmanVelocityTracker(int track_id, int class_id) {
+    time_since_update_ = 0;
+    hits_ = 0;
+    hit_streak_ = 0;
+    age_ = 0;
+    track_id_ = track_id;
+    class_id_ = class_id;
 
     filter_.init(dim_state_, dim_measure_, 0);
 
@@ -93,23 +94,28 @@ class KalmanVelocityTracker {
   }
 
   // create kalman filter with initial bbox state
-  KalmanVelocityTracker(const BboxVector& init_bbox, int id) : KalmanVelocityTracker(id) {
+  KalmanVelocityTracker(const BboxVector& init_bbox, int track_id, int class_id)
+      : KalmanVelocityTracker(track_id, class_id) {
     auto init_state = get_state_from_bbox(init_bbox);
     for (int i = 0; i < dim_measure_; ++i) {
       filter_.statePost.at<float>(i, 0) = init_state.at(i);
     }
   }
 
-  BboxVector get_state_bbox() const;
+  KalmanVelocityTracker(const DetectionVector& init_det, int track_id)
+      : KalmanVelocityTracker(get_bbox_from_detection(init_det), track_id, init_det.at(5)) {}
+
+  DetectionVector get_state_bbox() const;
   BboxVector predict();
-  BboxVector update(const BboxVector& observation);
+  DetectionVector update(const DetectionVector& observation);
 
  public:
-  int time_since_update;
-  int hits;
-  int hit_streak;
-  int age;
-  int id;
+  int time_since_update_;
+  int hits_;
+  int hit_streak_;
+  int age_;
+  int track_id_;
+  int class_id_;
 
  private:
   int dim_state_ = 7;
@@ -123,7 +129,7 @@ class KalmanVelocityTracker {
 class SortTracker {
  public:
   SortTracker(int max_age = 5, int min_hits = 1, int num_init_frames = 5, float iou_threshold = 0.1);
-  std::vector<BboxVectorWithId> update(const std::vector<BboxVector>& detections);
+  std::vector<DetectionVector> update(const std::vector<DetectionVector>& detections);
 
  private:
   std::vector<int> solve_assignment_(const cv::Mat& cost_matrix);

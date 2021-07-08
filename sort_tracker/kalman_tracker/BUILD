@@ -4,13 +4,13 @@ cc_library(
     hdrs = ["kalman_tracker.h"],
     srcs = ["kalman_tracker.cc"],
     deps = [
-        "//main/utils:tracker_helper",
         "@linux_opencv//:opencv",
         "@com_google_ortools//ortools/base",
         "@com_google_ortools//ortools/graph",
         "@com_google_ortools//ortools/graph:linear_assignment",
         "@com_google_ortools//ortools/algorithms:hungarian",
-        "@com_google_absl//absl/container:flat_hash_map"
+        "@com_google_absl//absl/container:flat_hash_map",
+        "//sort_tracker/utils:tracker_helper"
     ],
     visibility = ["//visibility:public"],
 )

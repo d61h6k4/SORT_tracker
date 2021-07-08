@@ -5,12 +5,14 @@
 namespace Tracker {
 
 // Correct step
-BboxVector KalmanVelocityTracker::update(const BboxVector& observed_bbox) {
-  time_since_update = 0;
-  hits += 1;
-  hit_streak += 1;
+DetectionVector KalmanVelocityTracker::update(const DetectionVector& detection) {
+  time_since_update_ = 0;
+  hits_ += 1;
+  hit_streak_ += 1;
+  class_id_ = detection.at(5);
 
   // create new measurement matrix
+  auto observed_bbox = get_bbox_from_detection(detection);
   auto observed_state = get_state_from_bbox(observed_bbox);
   measurement_ = cv::Mat(dim_measure_, 1, CV_32F, observed_state.data());
 
@@ -24,19 +26,23 @@ BboxVector KalmanVelocityTracker::update(const BboxVector& observed_bbox) {
 
   auto corrected_bbox = get_bbox_from_state(corrected_state);
 
-  return corrected_bbox;
+  DetectionVector result = {
+      corrected_bbox.at(0),          corrected_bbox.at(1),         corrected_bbox.at(2), corrected_bbox.at(3), 1.0,
+      static_cast<float>(class_id_), static_cast<float>(track_id_)};
+
+  return result;
 }
 
 // Predict step
 BboxVector KalmanVelocityTracker::predict() {
   auto prediction = filter_.predict();
-  age += 1;
+  age_ += 1;
 
-  if (time_since_update > 0) {
-    hit_streak = 0;
+  if (time_since_update_ > 0) {
+    hit_streak_ = 0;
   }
 
-  time_since_update += 1;
+  time_since_update_ += 1;
 
   StateVector state;
   for (int i = 0; i < dim_measure_; ++i) {
@@ -49,7 +55,7 @@ BboxVector KalmanVelocityTracker::predict() {
 }
 
 // Return the current state vector
-BboxVector KalmanVelocityTracker::get_state_bbox() const {
+DetectionVector KalmanVelocityTracker::get_state_bbox() const {
   cv::Mat state_post = filter_.statePost;
   StateVector state;
 
@@ -57,7 +63,17 @@ BboxVector KalmanVelocityTracker::get_state_bbox() const {
     state.at(i) = state_post.at<float>(i, 0);
   }
 
-  return get_bbox_from_state(state);
+  auto bbox = get_bbox_from_state(state);
+
+  DetectionVector result = {bbox.at(0),
+                            bbox.at(1),
+                            bbox.at(2),
+                            bbox.at(3),
+                            1.0,
+                            static_cast<float>(class_id_),
+                            static_cast<float>(track_id_)};
+
+  return result;
 }
 
 // SortTracker constructor
@@ -72,23 +88,35 @@ SortTracker::SortTracker(int max_age, int min_hits, int num_init_frames, float i
 }
 
 // SortTracker update
-std::vector<BboxVectorWithId> SortTracker::update(const std::vector<BboxVector>& detections) {
+std::vector<DetectionVector> SortTracker::update(const std::vector<DetectionVector>& detections) {
   // update time step and all trackers' internal time steps
   frame_count_++;
 
-  std::vector<BboxVector> predictions;
+  std::vector<BboxVector> predicted_bboxes;
   for (size_t i = 0; i < trackers_.size(); ++i) {
     auto prediction = trackers_.at(i).predict();
-    predictions.push_back(prediction);
+    predicted_bboxes.push_back(prediction);
   }
 
-  std::vector<int> assignment_indices(detections.size(), -1);
-  bool is_iou_valid = detections.size() != 0 && predictions.size() != 0;
+  std::vector<BboxVector> detected_bboxes;
+  std::transform(detections.begin(), detections.end(), std::back_inserter(detected_bboxes),
+                 [](const DetectionVector& x) -> BboxVector { return get_bbox_from_detection(x); });
+
+  std::vector<int> assignment_indices(detected_bboxes.size(), -1);
+  bool is_iou_valid = detected_bboxes.size() != 0 && predicted_bboxes.size() != 0;
   if (is_iou_valid) {
     // calculate negated iou matrix and solve matching problem
-    auto iou_matrix = calculate_pairwise_iou(detections, predictions);
+    cv::Mat iou_matrix = calculate_pairwise_iou(detected_bboxes, predicted_bboxes);
+    cv::threshold(iou_matrix, iou_matrix, iou_threshold_, 1.0, cv::THRESH_TOZERO);
+
     auto cost_matrix = (-1) * iou_matrix;
     assignment_indices = solve_assignment_(cost_matrix);
+
+    for (int i = 0; i < iou_matrix.rows; ++i) {
+      if (iou_matrix.at<float>(i, assignment_indices.at(i)) <= iou_threshold_) {
+        assignment_indices.at(i) = -1;
+      }
+    }
   }
 
   // update matched trackers with corresponding detections, create new tracker otherwise
@@ -104,23 +132,23 @@ std::vector<BboxVectorWithId> SortTracker::update(const std::vector<BboxVector>&
   }
 
   // construct result - bboxes with corresponding tracker id
-  std::vector<BboxVectorWithId> result;
+  std::vector<DetectionVector> result;
   std::for_each(trackers_.begin(), trackers_.end(), [this, &result](const KalmanVelocityTracker& tracker) {
     // at the beginning also consider tracks that are at ongoing init
-    bool is_initialized = tracker.hits >= min_hits_ || frame_count_ <= num_init_frames_;
-    bool is_valid = is_initialized && (tracker.time_since_update <= max_age_);
+    bool is_initialized = tracker.hits_ >= min_hits_ || frame_count_ <= num_init_frames_;
+    bool is_valid = is_initialized && (tracker.time_since_update_ <= max_age_);
 
     if (is_valid) {
       auto current_state = tracker.get_state_bbox();
-      BboxVectorWithId temp;
+      DetectionVector temp;
 
       std::copy(current_state.begin(), current_state.end(), temp.begin());
-      temp.back() = tracker.id;
+      temp.back() = static_cast<float>(tracker.track_id_);
       result.push_back(temp);
     }
   });
 
-  auto remove_cond = [this](const KalmanVelocityTracker& x) { return x.time_since_update > max_age_; };
+  auto remove_cond = [this](const KalmanVelocityTracker& x) { return x.time_since_update_ > max_age_; };
   trackers_.erase(std::remove_if(trackers_.begin(), trackers_.end(), remove_cond), trackers_.end());
 
   return result;

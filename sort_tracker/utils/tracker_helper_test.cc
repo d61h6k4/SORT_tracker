@@ -1,4 +1,4 @@
-#include "main/utils/tracker_helper.h"
+#include "sort_tracker/utils/tracker_helper.h"
 
 #include "gtest/gtest.h"
 
@@ -27,6 +27,17 @@ TEST_F(SortTrackerTest, BboxToStateConversionSuccess) {
   EXPECT_FLOAT_EQ(state.at(4), 0);
   EXPECT_FLOAT_EQ(state.at(5), 0);
   EXPECT_FLOAT_EQ(state.at(6), 0);
+}
+
+TEST_F(SortTrackerTest, DetectionToBboxConversionSuccess) {
+  Tracker::DetectionVector detection = {0, 0, 40, 20, 0.5, 0, -1};
+
+  Tracker::BboxVector bbox = Tracker::get_bbox_from_detection(detection);
+
+  EXPECT_FLOAT_EQ(bbox.at(0), 0);
+  EXPECT_FLOAT_EQ(bbox.at(1), 0);
+  EXPECT_FLOAT_EQ(bbox.at(2), 40);
+  EXPECT_FLOAT_EQ(bbox.at(3), 20);
 }
 
 TEST_F(SortTrackerTest, IoUCalculationSuccess) {
