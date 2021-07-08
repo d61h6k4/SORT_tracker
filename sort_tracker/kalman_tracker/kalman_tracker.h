@@ -17,13 +17,13 @@ using Graph = util::ListGraph<int, int>;
 // Class for constant velocity motion model
 class KalmanVelocityTracker {
  public:
-  KalmanVelocityTracker(int id) {
+  KalmanVelocityTracker(int track_id, int class_id) {
     time_since_update_ = 0;
     hits_ = 0;
     hit_streak_ = 0;
     age_ = 0;
-    track_id_ = id;
-    class_id_ = -1;
+    track_id_ = track_id;
+    class_id_ = class_id;
 
     filter_.init(dim_state_, dim_measure_, 0);
 
@@ -94,15 +94,16 @@ class KalmanVelocityTracker {
   }
 
   // create kalman filter with initial bbox state
-  KalmanVelocityTracker(const BboxVector& init_bbox, int id) : KalmanVelocityTracker(id) {
+  KalmanVelocityTracker(const BboxVector& init_bbox, int track_id, int class_id)
+      : KalmanVelocityTracker(track_id, class_id) {
     auto init_state = get_state_from_bbox(init_bbox);
     for (int i = 0; i < dim_measure_; ++i) {
       filter_.statePost.at<float>(i, 0) = init_state.at(i);
     }
   }
 
-  KalmanVelocityTracker(const DetectionVector& init_det, int id)
-      : KalmanVelocityTracker(get_bbox_from_detection(init_det), id) {}
+  KalmanVelocityTracker(const DetectionVector& init_det, int track_id)
+      : KalmanVelocityTracker(get_bbox_from_detection(init_det), track_id, init_det.at(5)) {}
 
   DetectionVector get_state_bbox() const;
   BboxVector predict();
@@ -128,7 +129,7 @@ class KalmanVelocityTracker {
 class SortTracker {
  public:
   SortTracker(int max_age = 5, int min_hits = 1, int num_init_frames = 5, float iou_threshold = 0.1);
-  std::vector<BboxVectorTrackId> update(const std::vector<DetectionVector>& detections);
+  std::vector<DetectionVector> update(const std::vector<DetectionVector>& detections);
 
  private:
   std::vector<int> solve_assignment_(const cv::Mat& cost_matrix);

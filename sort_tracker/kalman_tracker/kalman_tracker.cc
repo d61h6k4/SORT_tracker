@@ -88,7 +88,7 @@ SortTracker::SortTracker(int max_age, int min_hits, int num_init_frames, float i
 }
 
 // SortTracker update
-std::vector<BboxVectorTrackId> SortTracker::update(const std::vector<DetectionVector>& detections) {
+std::vector<DetectionVector> SortTracker::update(const std::vector<DetectionVector>& detections) {
   // update time step and all trackers' internal time steps
   frame_count_++;
 
@@ -106,9 +106,17 @@ std::vector<BboxVectorTrackId> SortTracker::update(const std::vector<DetectionVe
   bool is_iou_valid = detected_bboxes.size() != 0 && predicted_bboxes.size() != 0;
   if (is_iou_valid) {
     // calculate negated iou matrix and solve matching problem
-    auto iou_matrix = calculate_pairwise_iou(detected_bboxes, predicted_bboxes);
+    cv::Mat iou_matrix = calculate_pairwise_iou(detected_bboxes, predicted_bboxes);
+    cv::threshold(iou_matrix, iou_matrix, iou_threshold_, 1.0, cv::THRESH_TOZERO);
+
     auto cost_matrix = (-1) * iou_matrix;
     assignment_indices = solve_assignment_(cost_matrix);
+
+    for (int i = 0; i < iou_matrix.rows; ++i) {
+      if (iou_matrix.at<float>(i, assignment_indices.at(i)) <= iou_threshold_) {
+        assignment_indices.at(i) = -1;
+      }
+    }
   }
 
   // update matched trackers with corresponding detections, create new tracker otherwise
@@ -124,7 +132,7 @@ std::vector<BboxVectorTrackId> SortTracker::update(const std::vector<DetectionVe
   }
 
   // construct result - bboxes with corresponding tracker id
-  std::vector<BboxVectorTrackId> result;
+  std::vector<DetectionVector> result;
   std::for_each(trackers_.begin(), trackers_.end(), [this, &result](const KalmanVelocityTracker& tracker) {
     // at the beginning also consider tracks that are at ongoing init
     bool is_initialized = tracker.hits_ >= min_hits_ || frame_count_ <= num_init_frames_;
@@ -132,10 +140,10 @@ std::vector<BboxVectorTrackId> SortTracker::update(const std::vector<DetectionVe
 
     if (is_valid) {
       auto current_state = tracker.get_state_bbox();
-      BboxVectorTrackId temp;
+      DetectionVector temp;
 
       std::copy(current_state.begin(), current_state.end(), temp.begin());
-      temp.back() = tracker.track_id_;
+      temp.back() = static_cast<float>(tracker.track_id_);
       result.push_back(temp);
     }
   });

@@ -9,11 +9,11 @@ class KalmanVelocityTrackerTest : public ::testing::Test {};
 class LinearAssignmentTest : public ::testing::Test {};
 class SortTrackerTest : public ::testing::Test {};
 
-TEST_F(KalmanVelocityTrackerTest, VelocityEmptyInitializationSuccess) { Tracker::KalmanVelocityTracker tracker(0); }
+TEST_F(KalmanVelocityTrackerTest, VelocityEmptyInitializationSuccess) { Tracker::KalmanVelocityTracker tracker(0, 0); }
 
 TEST_F(KalmanVelocityTrackerTest, VelocityStateBboxInitializationSuccess) {
   Tracker::BboxVector init_bbox = {1, 1, 1, 1};
-  Tracker::KalmanVelocityTracker tracker(init_bbox, 0);
+  Tracker::KalmanVelocityTracker tracker(init_bbox, 0, 0);
 
   auto state_bbox = tracker.get_state_bbox();
 
@@ -42,12 +42,12 @@ TEST_F(KalmanVelocityTrackerTest, VelocityStateDetectionInitializationSuccess) {
 }
 
 TEST_F(KalmanVelocityTrackerTest, VelocityKalmanFilterTrackProgressSuccess) {
-  Tracker::DetectionVector init_bbox = {100, 100, 10, 10, 1.0, 0, -1};
-  Tracker::KalmanVelocityTracker tracker(init_bbox, 0);
+  Tracker::DetectionVector init_det = {100, 100, 10, 10, 1.0, 0, -1};
+  Tracker::KalmanVelocityTracker tracker(init_det, 0);
 
   BboxVector res_prediction;
   DetectionVector res_update;
-  DetectionVector input = init_bbox;
+  DetectionVector input = init_det;
 
   for (int i = 0; i < 50; ++i) {
     res_prediction = tracker.predict();
@@ -75,12 +75,33 @@ TEST_F(SortTrackerTest, SortTrackerMatchingSuccess) {
   EXPECT_EQ(second_results.size(), 1);
 
   auto result_bbox = second_results.at(0);
-  EXPECT_FLOAT_EQ(result_bbox.at(4), 0);
+  EXPECT_FLOAT_EQ(result_bbox.at(6), 0);
 
   EXPECT_NEAR(result_bbox.at(0), 2, 2);
   EXPECT_NEAR(result_bbox.at(1), 2, 2);
   EXPECT_NEAR(result_bbox.at(2), 18, 2);
   EXPECT_NEAR(result_bbox.at(3), 22, 2);
+}
+
+TEST_F(SortTrackerTest, SortTrackerIouThresholdSuccess) {
+  Tracker::SortTracker sort_tracker(20, 0, 0, 0.1);
+
+  // First bboxes in both detections have high iou -> matched, second ones have small iou -> not matched
+  std::vector<Tracker::DetectionVector> first_detections = {{0, 0, 20, 20, 0.9, 0, -1}, {100, 100, 20, 20, 0.8, 1, -1}};
+  auto first_results = sort_tracker.update(first_detections);
+
+  std::vector<Tracker::DetectionVector> second_detections = {{2, 2, 20, 20, 0.8, 0, -1},
+                                                             {119, 119, 20, 20, 0.8, 1, -1}};
+  auto second_results = sort_tracker.update(second_detections);
+
+  EXPECT_EQ(second_results.size(), 3);
+
+  auto res_det_first = second_results.at(0);
+  auto res_det_second = second_results.at(1);
+  auto res_det_third = second_results.at(2);
+  EXPECT_FLOAT_EQ(res_det_first.at(6), 0);
+  EXPECT_FLOAT_EQ(res_det_second.at(6), 1);
+  EXPECT_FLOAT_EQ(res_det_third.at(6), 2);
 }
 
 TEST_F(SortTrackerTest, SortTrackerDeleteOldTrackersSuccess) {
