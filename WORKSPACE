@@ -37,9 +37,27 @@ git_repository(
 )
 #load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
+# glog
+http_archive(
+    name = "com_github_glog_glog",
+    sha256 = "58c9b3b6aaa4dd8b836c0fd8f65d0f941441fb95e27212c5eeb9979cfd3592ab",
+    strip_prefix = "glog-0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6",
+    urls = [
+        "https://github.com/google/glog/archive/0a2e5931bd5ff22fd3bf8999eb8ce776f159cda6.zip",
+    ],
+)
+
+# gflags needed by glog
+http_archive(
+    name = "com_github_gflags_gflags",
+    sha256 = "19713a36c9f32b33df59d1c79b4958434cb005b5b47dc5400a7a4b078111d9b5",
+    strip_prefix = "gflags-2.2.2",
+    url = "https://github.com/gflags/gflags/archive/v2.2.2.zip",
+)
+
 git_repository(
     name = "com_google_ortools",
-    commit = "fa84bc0", # release v8.2
+    commit = "8d19323", # release v8.0
     remote = "https://github.com/google/or-tools.git",
 )
 
@@ -70,7 +88,7 @@ http_archive(
 )
 
 new_local_repository(
-    name = "opencv",
+    name = "linux_opencv",
     build_file = "//third_party:opencv_linux.BUILD",
-    path = "/usr",
+    path = "/usr/local",
 )

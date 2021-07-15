@@ -2,9 +2,9 @@ name: C++ lint and test
 
 on:
   push:
-    branches: [master]
+    branches: [master, develop]
   pull_request:
-    branches: [master]
+    branches: [master, develop]
   workflow_dispatch:
 
 jobs:
@@ -43,4 +43,4 @@ jobs:
             ${{ runner.os }}-${{ env.cache-name }}-main
 
       - name: Run Tests
-        run: bazel test //...
+        run: bazel test //... --test_output=all
